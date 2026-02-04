@@ -267,8 +267,8 @@ export default function QuestionsPage() {
         <div className="space-y-8">
             <header className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Evaluation Questions</h1>
-                    <p className="mt-2 text-zinc-500 dark:text-zinc-400">Define the metrics used for team evaluations.</p>
+                    <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Questions Library</h1>
+                    <p className="mt-2 text-zinc-500 dark:text-zinc-400">Manage template questions that can be imported into evaluation periods.</p>
                 </div>
                 <button
                     onClick={() => {

@@ -24,6 +24,8 @@ import Link from "next/link";
 
 interface Assignment {
     id: string;
+    periodId: string;
+    periodName: string;
     evaluatorId: string;
     evaluateeId: string;
     evaluateeName: string;
@@ -45,13 +47,35 @@ export default function EvaluationsPage() {
 
     const fetchAssignments = async () => {
         try {
-            const q = query(
-                collection(db, "assignments"),
-                where("evaluatorId", "==", user?.uid),
-                orderBy("createdAt", "desc")
-            );
-            const snapshot = await getDocs(q);
-            setAssignments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Assignment)));
+            // 1. Fetch all published periods
+            const periodsSnap = await getDocs(query(
+                collection(db, "periods"),
+                where("status", "==", "published")
+            ));
+
+            const periodIds = periodsSnap.docs.map(d => d.id);
+            const allAssignments: Assignment[] = [];
+
+            // 2. Fetch assignments for each period
+            // Note: Collection Group queries would be faster but require composite indexes.
+            // For typical usage, a loop over published periods is efficient enough.
+            for (const pid of periodIds) {
+                const aSnap = await getDocs(query(
+                    collection(db, `periods/${pid}/assignments`),
+                    where("evaluatorId", "==", user?.uid)
+                ));
+                allAssignments.push(...aSnap.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                } as Assignment)));
+            }
+
+            // Sort by createdAt desc
+            setAssignments(allAssignments.sort((a, b) => {
+                const timeA = a.createdAt?.toMillis?.() || 0;
+                const timeB = b.createdAt?.toMillis?.() || 0;
+                return timeB - timeA;
+            }));
         } catch (error) {
             console.error("Error fetching assignments", error);
         } finally {
@@ -96,6 +120,9 @@ export default function EvaluationsPage() {
                                         Eval for <span className="text-zinc-900 dark:text-zinc-100">{a.evaluateeName}</span>
                                     </h4>
                                     <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-zinc-500 font-medium tracking-tight">
+                                        <span className="flex items-center gap-1 uppercase tracking-widest text-[10px] bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md font-bold">
+                                            {a.periodName || "Legacy Period"}
+                                        </span>
                                         <span className="flex items-center gap-1 uppercase tracking-widest text-[10px]">
                                             <User className="h-3 w-3" /> {a.type.replace(/-/g, " ")}
                                         </span>
@@ -108,14 +135,14 @@ export default function EvaluationsPage() {
 
                             <div className="flex items-center gap-4 border-t border-zinc-50 pt-4 sm:border-0 sm:pt-0">
                                 <div className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full ${a.status === 'completed'
-                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-500'
-                                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-500'
+                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-500'
+                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-500'
                                     }`}>
                                     {a.status}
                                 </div>
                                 {a.status === "pending" && (
                                     <Link
-                                        href={`/dashboard/evaluations/${a.id}`}
+                                        href={`/dashboard/evaluations/${a.periodId}/${a.id}`}
                                         className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 text-white transition-transform hover:scale-105 active:scale-95 dark:bg-zinc-100 dark:text-zinc-950"
                                     >
                                         <ArrowRight className="h-5 w-5" />

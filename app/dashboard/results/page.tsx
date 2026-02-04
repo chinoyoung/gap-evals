@@ -20,6 +20,7 @@ import {
     User,
     Search,
     Archive,
+    Calendar,
     ArchiveRestore,
     ChevronRight,
     ChevronDown,
@@ -40,6 +41,8 @@ interface Evaluation {
     archived?: boolean;
     shared?: boolean;
     evaluateeId?: string;
+    periodId?: string;
+    periodName?: string;
 }
 
 interface Question {
@@ -51,6 +54,8 @@ interface Question {
 
 export default function ResultsPage() {
     const { role } = useAuth();
+    const [periods, setPeriods] = useState<any[]>([]);
+    const [selectedPeriodId, setSelectedPeriodId] = useState<string>("");
     const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
     const [questions, setQuestions] = useState<Question[]>([]);
     const [loading, setLoading] = useState(true);
@@ -60,26 +65,57 @@ export default function ResultsPage() {
     const [selection, setSelection] = useState<Set<string>>(new Set());
 
     const filteredEvaluations = evaluations.filter(ev =>
-        ev.evaluateeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ev.evaluatorName?.toLowerCase().includes(searchQuery.toLowerCase())
+        (ev.evaluateeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            ev.evaluatorName?.toLowerCase().includes(searchQuery.toLowerCase())) &&
+        (!selectedPeriodId || ev.periodId === selectedPeriodId)
     );
 
     const selectedEvaluation = evaluations.find(ev => ev.id === selectedId);
 
     useEffect(() => {
-        fetchData();
+        fetchPeriods();
     }, []);
 
-    const fetchData = async () => {
+    useEffect(() => {
+        if (selectedPeriodId) {
+            fetchData();
+        }
+    }, [selectedPeriodId]);
+
+    const fetchPeriods = async () => {
         try {
-            const [evalSnap, questSnap] = await Promise.all([
-                getDocs(query(collection(db, "evaluations"), orderBy("submittedAt", "desc"))),
-                getDocs(collection(db, "questions"))
-            ]);
+            const snap = await getDocs(query(collection(db, "periods"), orderBy("createdAt", "desc")));
+            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setPeriods(data);
+            if (data.length > 0) {
+                setSelectedPeriodId(data[0].id);
+            } else {
+                setLoading(false);
+            }
+        } catch (error) {
+            console.error("Error fetching periods:", error);
+            setLoading(false);
+        }
+    };
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            // Fetch evaluations for this period
+            const evalSnap = await getDocs(query(
+                collection(db, "evaluations"),
+                where("periodId", "==", selectedPeriodId),
+                orderBy("submittedAt", "desc")
+            ));
+
+            // Fetch questions for this period
+            const questSnap = await getDocs(query(
+                collection(db, `periods/${selectedPeriodId}/questions`),
+                orderBy("order", "asc")
+            ));
 
             setEvaluations(evalSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Evaluation)));
-            const qs = questSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Question));
-            setQuestions(qs.sort((a, b) => (a.order ?? 999) - (b.order ?? 999)));
+            setQuestions(questSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Question)));
         } catch (error) {
             console.error("Error fetching results", error);
         } finally {
@@ -185,15 +221,31 @@ export default function ResultsPage() {
                     <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Evaluation Results</h1>
                     <p className="mt-2 text-zinc-500 dark:text-zinc-400">Review all submitted feedback and performance data.</p>
                 </div>
-                <div className="relative w-full max-w-sm">
-                    <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                    <input
-                        type="search"
-                        placeholder="Search by name..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full rounded-2xl border-none bg-white px-11 py-3 text-sm shadow-sm ring-1 ring-zinc-200 focus:ring-2 focus:ring-zinc-900 dark:bg-zinc-900 dark:ring-zinc-800 dark:focus:ring-zinc-100"
-                    />
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <div className="relative">
+                        <Calendar className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                        <select
+                            value={selectedPeriodId}
+                            onChange={(e) => setSelectedPeriodId(e.target.value)}
+                            className="w-full appearance-none rounded-2xl border-none bg-white pl-11 pr-10 py-3 text-sm shadow-sm ring-1 ring-zinc-200 focus:ring-2 focus:ring-zinc-900 dark:bg-zinc-900 dark:ring-zinc-800 dark:focus:ring-zinc-100 cursor-pointer"
+                        >
+                            <option value="">All Periods</option>
+                            {periods.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                    </div>
+                    <div className="relative w-full max-w-sm">
+                        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                        <input
+                            type="search"
+                            placeholder="Search by name..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full rounded-2xl border-none bg-white px-11 py-3 text-sm shadow-sm ring-1 ring-zinc-200 focus:ring-2 focus:ring-zinc-900 dark:bg-zinc-900 dark:ring-zinc-800 dark:focus:ring-zinc-100"
+                        />
+                    </div>
                 </div>
             </header>
 

@@ -35,6 +35,8 @@ interface Question {
 
 interface Assignment {
     id: string;
+    periodId: string;
+    periodName: string;
     evaluatorId: string;
     evaluatorName: string;
     evaluateeId: string;
@@ -44,7 +46,7 @@ interface Assignment {
 }
 
 export default function EvaluationForm() {
-    const { id } = useParams();
+    const { periodId, assignmentId } = useParams();
     const router = useRouter();
     const { user } = useAuth();
 
@@ -56,16 +58,16 @@ export default function EvaluationForm() {
     const [submitted, setSubmitted] = useState(false);
 
     useEffect(() => {
-        if (id && user) {
+        if (periodId && assignmentId && user) {
             fetchData();
         }
-    }, [id, user]);
+    }, [periodId, assignmentId, user]);
 
     const fetchData = async () => {
         try {
             const [assignSnap, questSnap] = await Promise.all([
-                getDoc(doc(db, "assignments", id as string)),
-                getDocs(collection(db, "questions"))
+                getDoc(doc(db, `periods/${periodId}/assignments`, assignmentId as string)),
+                getDocs(query(collection(db, `periods/${periodId}/questions`), orderBy("order", "asc")))
             ]);
 
             if (assignSnap.exists()) {
@@ -78,7 +80,7 @@ export default function EvaluationForm() {
             }
 
             const qs = questSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Question));
-            setQuestions(qs.sort((a: any, b: any) => (a.order ?? 999) - (b.order ?? 999)));
+            setQuestions(qs);
         } catch (error) {
             console.error("Error fetching data", error);
         } finally {
@@ -100,7 +102,9 @@ export default function EvaluationForm() {
 
         try {
             await addDoc(collection(db, "evaluations"), {
-                assignmentId: id,
+                assignmentId: assignmentId,
+                periodId: periodId,
+                periodName: assignment?.periodName,
                 evaluatorId: user?.uid,
                 evaluatorName: assignment?.evaluatorName,
                 evaluateeId: assignment?.evaluateeId,
@@ -110,7 +114,7 @@ export default function EvaluationForm() {
                 submittedAt: Timestamp.now(),
             });
 
-            await updateDoc(doc(db, "assignments", id as string), {
+            await updateDoc(doc(db, `periods/${periodId}/assignments`, assignmentId as string), {
                 status: "completed"
             });
 
@@ -147,6 +151,16 @@ export default function EvaluationForm() {
         );
     }
 
+    if (!assignment) {
+        return (
+            <div className="py-20 text-center">
+                <AlertCircle className="mx-auto mb-4 h-12 w-12 text-zinc-300" />
+                <h2 className="text-xl font-bold">Assignment not found</h2>
+                <Link href="/dashboard/evaluations" className="mt-4 text-zinc-900 underline">Back to My Evaluations</Link>
+            </div>
+        );
+    }
+
     return (
         <div className="mx-auto max-w-3xl space-y-8">
             <Link
@@ -158,6 +172,9 @@ export default function EvaluationForm() {
             </Link>
 
             <header>
+                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                    {assignment.periodName}
+                </div>
                 <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
                     Evaluating <span className="text-zinc-900 dark:text-zinc-100">{assignment?.evaluateeName}</span>
                 </h1>

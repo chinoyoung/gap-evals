@@ -15,7 +15,8 @@ import {
     ClipboardCheck,
     UserCircle,
     BarChart3,
-    Building2
+    Building2,
+    CalendarDays
 } from "lucide-react";
 import Link from "next/link";
 import { clsx, type ClassValue } from "clsx";
@@ -52,9 +53,9 @@ export default function DashboardLayout({
     const navItems = [
         { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
         ...(role === "Admin" ? [
-            { name: "Questions", href: "/dashboard/questions", icon: FileText },
+            { name: "Evaluation Periods", href: "/dashboard/periods", icon: CalendarDays },
+            { name: "Questions Library", href: "/dashboard/questions", icon: FileText },
             { name: "Departments", href: "/dashboard/departments", icon: Building2 },
-            { name: "Assignments", href: "/dashboard/assignments", icon: ClipboardCheck },
             { name: "Users", href: "/dashboard/team", icon: Users },
             { name: "Results", href: "/dashboard/results", icon: BarChart3 },
         ] : []),

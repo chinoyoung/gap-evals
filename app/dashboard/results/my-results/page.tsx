@@ -6,6 +6,8 @@ import { db } from "@/lib/firebase";
 import {
     collection,
     getDocs,
+    getDoc,
+    doc,
     query,
     where,
     orderBy
@@ -54,29 +56,80 @@ export default function MyResultsPage() {
     const [loading, setLoading] = useState(true);
     const [questions, setQuestions] = useState<Question[]>([]);
     const [groupedResults, setGroupedResults] = useState<Record<string, GroupedResult>>({});
+    const [periods, setPeriods] = useState<any[]>([]);
+    const [selectedPeriodId, setSelectedPeriodId] = useState<string>("");
     const [expandedType, setExpandedType] = useState<string | null>(null);
 
     useEffect(() => {
         if (user) {
-            fetchData();
+            fetchPeriods();
         }
     }, [user]);
 
-    const fetchData = async () => {
+    useEffect(() => {
+        if (selectedPeriodId) {
+            fetchData();
+        }
+    }, [selectedPeriodId, user]);
+
+    const fetchPeriods = async () => {
         try {
-            // Fetch questions and evaluations in parallel
-            const [questSnap, evalSnap] = await Promise.all([
-                getDocs(collection(db, "questions")),
-                getDocs(query(
-                    collection(db, "evaluations"),
-                    where("shared", "==", true)
-                ))
-            ]);
+            // Get all periods that have shared evaluations for this user
+            const evalSnap = await getDocs(query(
+                collection(db, "evaluations"),
+                where("shared", "==", true)
+            ));
 
+            const myEvals = evalSnap.docs
+                .map(d => d.data())
+                .filter(ev =>
+                    ev.evaluateeId === user?.uid ||
+                    (ev.evaluateeName === user?.displayName && !ev.evaluateeId)
+                );
+
+            const periodIds = Array.from(new Set(myEvals.map(e => e.periodId).filter(Boolean)));
+
+            if (periodIds.length === 0) {
+                setLoading(false);
+                return;
+            }
+
+            const periodsData: any[] = [];
+            for (const pid of periodIds) {
+                const pSnap = await getDoc(doc(db, "periods", pid as string));
+                if (pSnap.exists()) {
+                    periodsData.push({ id: pSnap.id, ...pSnap.data() });
+                }
+            }
+
+            setPeriods(periodsData.sort((a, b) => b.createdAt?.toMillis() - a.createdAt?.toMillis()));
+            if (periodsData.length > 0) {
+                setSelectedPeriodId(periodsData[0].id);
+            }
+        } catch (error) {
+            console.error("Error fetching periods for results", error);
+            setLoading(false);
+        }
+    };
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            // 1. Fetch questions for the selected period
+            const questSnap = await getDocs(query(
+                collection(db, `periods/${selectedPeriodId}/questions`),
+                orderBy("order", "asc")
+            ));
             const qs = questSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Question));
-            setQuestions(qs.sort((a, b) => (a.order ?? 999) - (b.order ?? 999)));
+            setQuestions(qs);
 
-            // Filter by user ID or Name (fallback for legacy evaluations without evaluateeId)
+            // 2. Fetch shared evaluations for this period and user
+            const evalSnap = await getDocs(query(
+                collection(db, "evaluations"),
+                where("periodId", "==", selectedPeriodId),
+                where("shared", "==", true)
+            ));
+
             const evals = evalSnap.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as Evaluation))
                 .filter(ev =>
@@ -89,7 +142,7 @@ export default function MyResultsPage() {
                     return timeB - timeA;
                 });
 
-            // Group by type
+            // 3. Group by type
             const groups: Record<string, GroupedResult> = {};
 
             evals.forEach(ev => {
@@ -141,7 +194,7 @@ export default function MyResultsPage() {
                 setExpandedType(Object.keys(groups)[0]);
             }
         } catch (error) {
-            console.error("Error fetching my results", error);
+            console.error("Error fetching my resultsData", error);
         } finally {
             setLoading(false);
         }
@@ -171,11 +224,28 @@ export default function MyResultsPage() {
 
     return (
         <div className="space-y-8 pb-20">
-            <header>
-                <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">My Performance Feedback</h1>
-                <p className="mt-2 text-zinc-500 dark:text-zinc-400">
-                    Aggregated and anonymized insights from your team and managers.
-                </p>
+            <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">My Performance Feedback</h1>
+                    <p className="mt-2 text-zinc-500 dark:text-zinc-400">
+                        Aggregated and anonymized insights from your team and managers.
+                    </p>
+                </div>
+                {periods.length > 1 && (
+                    <div className="relative w-full max-w-xs">
+                        <Clock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                        <select
+                            value={selectedPeriodId}
+                            onChange={(e) => setSelectedPeriodId(e.target.value)}
+                            className="w-full appearance-none rounded-2xl border-none bg-white pl-11 pr-10 py-3 text-sm shadow-sm ring-1 ring-zinc-200 focus:ring-2 focus:ring-zinc-900 dark:bg-zinc-900 dark:ring-zinc-800 dark:focus:ring-zinc-100 cursor-pointer font-medium"
+                        >
+                            {periods.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                    </div>
+                )}
             </header>
 
             <div className="space-y-6">

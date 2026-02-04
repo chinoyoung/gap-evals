@@ -24,6 +24,7 @@ import Link from "next/link";
 
 interface Assignment {
     id: string;
+    periodId: string;
     evaluateeName: string;
     type: string;
     status: "pending" | "completed";
@@ -47,47 +48,61 @@ export default function DashboardOverview() {
 
     const fetchDashboardData = async () => {
         try {
-            // Fetch stats
-            const pendingQuery = query(
-                collection(db, "assignments"),
-                where("evaluatorId", "==", user?.uid),
-                where("status", "==", "pending")
-            );
-            const completedQuery = query(
-                collection(db, "assignments"),
-                where("evaluatorId", "==", user?.uid),
-                where("status", "==", "completed")
-            );
+            // 1. Fetch all published periods
+            const periodsSnap = await getDocs(query(
+                collection(db, "periods"),
+                where("status", "==", "published")
+            ));
 
-            const [pendingSnap, completedSnap] = await Promise.all([
-                getCountFromServer(pendingQuery),
-                getCountFromServer(completedQuery)
-            ]);
+            const periodIds = periodsSnap.docs.map(d => d.id);
+            let pendingCount = 0;
+            let completedCount = 0;
+            let totalAssignments = 0;
+            const assignments: Assignment[] = [];
+
+            // 2. Fetch assignments for each period
+            for (const pid of periodIds) {
+                const aSnap = await getDocs(query(
+                    collection(db, `periods/${pid}/assignments`),
+                    where("evaluatorId", "==", user?.uid)
+                ));
+
+                aSnap.docs.forEach(doc => {
+                    const data = doc.data();
+                    if (data.status === "pending") pendingCount++;
+                    if (data.status === "completed") completedCount++;
+
+                    if (data.status === "pending" && assignments.length < 3) {
+                        assignments.push({
+                            id: doc.id,
+                            periodId: pid,
+                            ...data
+                        } as Assignment);
+                    }
+                });
+            }
 
             const newStats = [
-                { label: "Pending Evaluations", value: String(pendingSnap.data().count), icon: Clock, color: "text-amber-500", bg: "bg-amber-50" },
-                { label: "Completed", value: String(completedSnap.data().count), icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-50" },
+                { label: "Pending Evaluations", value: String(pendingCount), icon: Clock, color: "text-amber-500", bg: "bg-amber-50" },
+                { label: "Completed", value: String(completedCount), icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-50" },
             ];
 
             if (role === "Admin") {
                 const usersCount = await getCountFromServer(collection(db, "users"));
-                const totalAssignCount = await getCountFromServer(collection(db, "assignments"));
+                // For admin, count across all periods (or just published?)
+                // Let's count published assignments for now as it's more relevant
+                for (const pid of periodIds) {
+                    const countSnap = await getCountFromServer(collection(db, `periods/${pid}/assignments`));
+                    totalAssignments += countSnap.data().count;
+                }
 
                 newStats.push(
                     { label: "Total Team Members", value: String(usersCount.data().count), icon: Users, color: "text-blue-500", bg: "bg-blue-50" },
-                    { label: "Total Assignments", value: String(totalAssignCount.data().count), icon: ClipboardList, color: "text-indigo-500", bg: "bg-indigo-50" }
+                    { label: "Total Assignments", value: String(totalAssignments), icon: ClipboardList, color: "text-indigo-500", bg: "bg-indigo-50" }
                 );
             }
 
             setStats(newStats);
-
-            // Fetch active assignments (limit to first 3 for dashboard)
-            const assignmentsSnap = await getDocs(query(pendingQuery));
-            const assignments = assignmentsSnap.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            } as Assignment)).slice(0, 3);
-
             setActiveAssignments(assignments);
         } catch (error) {
             console.error("Error fetching dashboard data", error);
@@ -179,7 +194,7 @@ export default function DashboardOverview() {
                                     </div>
                                 </div>
                                 <Link
-                                    href={`/dashboard/evaluations/${item.id}`}
+                                    href={`/dashboard/evaluations/${item.periodId}/${item.id}`}
                                     className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 text-white transition-transform hover:scale-105 active:scale-95 dark:bg-zinc-100 dark:text-zinc-950"
                                 >
                                     <ArrowRight className="h-5 w-5" />
