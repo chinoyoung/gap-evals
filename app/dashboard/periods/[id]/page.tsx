@@ -57,6 +57,7 @@ interface User {
     uid: string;
     displayName: string;
     email: string;
+    departmentId?: string;
     department?: string;
 }
 
@@ -143,16 +144,33 @@ export default function PeriodDetailPage() {
 
     const fetchSubData = async () => {
         try {
-            // Fetch period-specific assignments
-            const aSnap = await getDocs(collection(db, `periods/${id}/assignments`));
+            // Fetch period-specific assignments, users, and departments in parallel
+            const [aSnap, uSnap, dSnap] = await Promise.all([
+                getDocs(collection(db, `periods/${id}/assignments`)),
+                getDocs(collection(db, "users")),
+                getDocs(collection(db, "departments"))
+            ]);
+
+            // Create a lookup map for department names
+            const deptsMap = dSnap.docs.reduce((acc, doc) => {
+                acc[doc.id] = doc.data().name;
+                return acc;
+            }, {} as Record<string, string>);
+
             setAssignments(aSnap.docs.map(d => ({ id: d.id, ...d.data() } as Assignment)));
 
-            // Fetch users for assignments
-            const uSnap = await getDocs(collection(db, "users"));
-            setUsers(uSnap.docs.map(d => ({ uid: d.id, ...d.data() } as User)));
+            // Enrich users with their department names
+            setUsers(uSnap.docs.map(d => {
+                const data = d.data();
+                return {
+                    uid: d.id,
+                    ...data,
+                    department: data.departmentId ? deptsMap[data.departmentId] : undefined
+                } as User;
+            }));
         } catch (err) {
             console.error("Error fetching sub-data:", err);
-            toastError("Failed to load assignments or users.");
+            toastError("Failed to load assignments, users, or departments.");
         }
     };
 
@@ -282,13 +300,12 @@ export default function PeriodDetailPage() {
         setIsGenerating(true);
         try {
             const batch = writeBatch(db);
-            const revieweeIds = Array.from(bulkReviewees);
             const reviewerIds = Array.from(bulkReviewers);
+            const revieweeIds = Array.from(bulkReviewees);
 
-            revieweeIds.forEach(targetId => {
-                const target = users.find(u => u.uid === targetId);
-
-                if (bulkType === "Self") {
+            if (bulkType === "Self") {
+                reviewerIds.forEach(targetId => {
+                    const target = users.find(u => u.uid === targetId);
                     const newRef = doc(collection(db, `periods/${id}/assignments`));
                     batch.set(newRef, {
                         periodId: id,
@@ -301,11 +318,12 @@ export default function PeriodDetailPage() {
                         status: "pending",
                         createdAt: Timestamp.now()
                     });
-                } else {
-                    reviewerIds.forEach(evalId => {
-                        // Avoid duplicates if possible or if they are the same person except if intended
-                        // Here we just build the assignments
-                        const evaluator = users.find(u => u.uid === evalId);
+                });
+            } else {
+                reviewerIds.forEach(evalId => {
+                    const evaluator = users.find(u => u.uid === evalId);
+                    revieweeIds.forEach(targetId => {
+                        const target = users.find(u => u.uid === targetId);
                         const newRef = doc(collection(db, `periods/${id}/assignments`));
                         batch.set(newRef, {
                             periodId: id,
@@ -319,8 +337,8 @@ export default function PeriodDetailPage() {
                             createdAt: Timestamp.now()
                         });
                     });
-                }
-            });
+                });
+            }
 
             await batch.commit();
             setShowBulkModal(false);
@@ -825,7 +843,7 @@ export default function PeriodDetailPage() {
                         <div>
                             <p className="text-[10px] sm:text-xs font-medium text-zinc-500 italic uppercase tracking-wider">
                                 Total assignments to be created: <span className="text-zinc-900 dark:text-zinc-50 font-bold text-sm sm:text-base">
-                                    {bulkType === "Self" ? bulkReviewees.size : bulkReviewees.size * bulkReviewers.size}
+                                    {bulkType === "Self" ? bulkReviewers.size : bulkReviewees.size * bulkReviewers.size}
                                 </span>
                             </p>
                         </div>
@@ -835,7 +853,7 @@ export default function PeriodDetailPage() {
                             </Button>
                             <Button
                                 onClick={handleBulkSubmit}
-                                disabled={isGenerating || bulkReviewees.size === 0 || (bulkType !== "Self" && bulkReviewers.size === 0)}
+                                disabled={isGenerating || bulkReviewers.size === 0 || (bulkType !== "Self" && bulkReviewees.size === 0)}
                                 loading={isGenerating}
                                 icon={Plus}
                                 className="px-8 shadow-xl"
@@ -847,14 +865,14 @@ export default function PeriodDetailPage() {
                 )}
             >
                 <div className="grid grid-cols-1 lg:grid-cols-2 divide-x divide-zinc-100 dark:divide-zinc-800 -m-8 h-[500px]">
-                    {/* Left: Select Reviewees */}
+                    {/* Left: Select Reviewers */}
                     <div className="p-8 space-y-6 overflow-y-auto">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-[10px] sm:text-sm font-bold uppercase tracking-widest text-zinc-400">1. Select Reviewees ({bulkReviewees.size})</h3>
+                            <h3 className="text-[10px] sm:text-sm font-bold uppercase tracking-widest text-zinc-400">1. Select Reviewer(s) ({bulkReviewers.size})</h3>
                             <button
                                 onClick={() => {
                                     const filtered = users.filter(u => bulkDept === "All" || u.department === bulkDept);
-                                    setBulkReviewees(new Set(filtered.map(u => u.uid)));
+                                    setBulkReviewers(new Set(filtered.map(u => u.uid)));
                                 }}
                                 className="text-[9px] sm:text-[10px] font-bold uppercase text-zinc-600 hover:underline"
                             >
@@ -889,14 +907,14 @@ export default function PeriodDetailPage() {
                                 (bulkDept === "All" || u.department === bulkDept) &&
                                 (u.displayName.toLowerCase().includes(bulkSearch.toLowerCase()))
                             ).map(u => {
-                                const isSelected = bulkReviewees.has(u.uid);
+                                const isSelected = bulkReviewers.has(u.uid);
                                 return (
                                     <div
                                         key={u.uid}
                                         onClick={() => {
-                                            const next = new Set(bulkReviewees);
+                                            const next = new Set(bulkReviewers);
                                             if (isSelected) next.delete(u.uid); else next.add(u.uid);
-                                            setBulkReviewees(next);
+                                            setBulkReviewers(next);
                                         }}
                                         className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${isSelected ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-lg" : "hover:bg-zinc-50 dark:hover:bg-zinc-800"}`}
                                     >
@@ -936,9 +954,9 @@ export default function PeriodDetailPage() {
                         {bulkType !== "Self" && (
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-[10px] sm:text-sm font-bold uppercase tracking-widest text-zinc-400">3. Select Reviewer(s) ({bulkReviewers.size})</h3>
+                                    <h3 className="text-[10px] sm:text-sm font-bold uppercase tracking-widest text-zinc-400">3. Select Reviewee(s) ({bulkReviewees.size})</h3>
                                     <button
-                                        onClick={() => setBulkReviewers(new Set())}
+                                        onClick={() => setBulkReviewees(new Set())}
                                         className="text-[10px] font-bold uppercase text-zinc-400 hover:text-zinc-600"
                                     >
                                         Clear
@@ -946,14 +964,14 @@ export default function PeriodDetailPage() {
                                 </div>
                                 <div className="space-y-1">
                                     {users.map(u => {
-                                        const isSelected = bulkReviewers.has(u.uid);
+                                        const isSelected = bulkReviewees.has(u.uid);
                                         return (
                                             <div
                                                 key={u.uid}
                                                 onClick={() => {
-                                                    const next = new Set(bulkReviewers);
+                                                    const next = new Set(bulkReviewees);
                                                     if (isSelected) next.delete(u.uid); else next.add(u.uid);
-                                                    setBulkReviewers(next);
+                                                    setBulkReviewees(next);
                                                 }}
                                                 className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${isSelected ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-lg" : "hover:bg-zinc-50 dark:hover:bg-zinc-800"}`}
                                             >
