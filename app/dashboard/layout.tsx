@@ -55,7 +55,7 @@ export default function DashboardLayout({
             { name: "Questions", href: "/dashboard/questions", icon: FileText },
             { name: "Departments", href: "/dashboard/departments", icon: Building2 },
             { name: "Assignments", href: "/dashboard/assignments", icon: ClipboardCheck },
-            { name: "Team", href: "/dashboard/team", icon: Users },
+            { name: "Users", href: "/dashboard/team", icon: Users },
             { name: "Results", href: "/dashboard/results", icon: BarChart3 },
         ] : []),
         ...(role === "Manager" ? [
@@ -69,10 +69,7 @@ export default function DashboardLayout({
             {/* Sidebar - Desktop */}
             <aside className="hidden w-64 flex-col border-r border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 lg:flex">
                 <div className="mb-10 flex items-center gap-3 px-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950">
-                        <ClipboardCheck className="h-5 w-5" />
-                    </div>
-                    <span className="text-lg font-semibold tracking-tight">GAP Eval</span>
+                    <span className="text-lg font-semibold tracking-tight">GAP Evaluations</span>
                 </div>
 
                 <nav className="flex-1 space-y-1">
