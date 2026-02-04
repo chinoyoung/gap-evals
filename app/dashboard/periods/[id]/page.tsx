@@ -40,7 +40,9 @@ import {
     Search,
     UserPlus,
     RotateCcw,
-    X
+    X,
+    CheckSquare,
+    Square
 } from "lucide-react";
 import Link from "next/link";
 
@@ -107,6 +109,18 @@ export default function PeriodDetailPage() {
     const [selectedEvaluator, setSelectedEvaluator] = useState("");
     const [selectedEvaluatee, setSelectedEvaluatee] = useState("");
     const [assignType, setAssignType] = useState<Assignment["type"]>("Peer to Peer");
+
+    // Bulk Wizard State
+    const [showBulkModal, setShowBulkModal] = useState(false);
+    const [bulkReviewees, setBulkReviewees] = useState<Set<string>>(new Set());
+    const [bulkReviewers, setBulkReviewers] = useState<Set<string>>(new Set());
+    const [bulkType, setBulkType] = useState<Assignment["type"]>("Peer to Peer");
+    const [bulkSearch, setBulkSearch] = useState("");
+    const [bulkDept, setBulkDept] = useState("All");
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    // Assignment Selection State
+    const [assignmentSelection, setAssignmentSelection] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         if (id) {
@@ -263,6 +277,83 @@ export default function PeriodDetailPage() {
             fetchSubData();
         } catch (error) {
             console.error("Error deleting assignment:", error);
+        }
+    };
+
+    const handleBulkSubmit = async () => {
+        if (bulkReviewees.size === 0 || (bulkType !== "Self" && bulkReviewers.size === 0)) return;
+        setIsGenerating(true);
+        try {
+            const batch = writeBatch(db);
+            const revieweeIds = Array.from(bulkReviewees);
+            const reviewerIds = Array.from(bulkReviewers);
+
+            revieweeIds.forEach(targetId => {
+                const target = users.find(u => u.uid === targetId);
+
+                if (bulkType === "Self") {
+                    const newRef = doc(collection(db, `periods/${id}/assignments`));
+                    batch.set(newRef, {
+                        periodId: id,
+                        periodName: period.name,
+                        evaluatorId: targetId,
+                        evaluatorName: target?.displayName || "Unknown",
+                        evaluateeId: targetId,
+                        evaluateeName: target?.displayName || "Unknown",
+                        type: "Self",
+                        status: "pending",
+                        createdAt: Timestamp.now()
+                    });
+                } else {
+                    reviewerIds.forEach(evalId => {
+                        // Avoid duplicates if possible or if they are the same person except if intended
+                        // Here we just build the assignments
+                        const evaluator = users.find(u => u.uid === evalId);
+                        const newRef = doc(collection(db, `periods/${id}/assignments`));
+                        batch.set(newRef, {
+                            periodId: id,
+                            periodName: period.name,
+                            evaluatorId: evalId,
+                            evaluatorName: evaluator?.displayName || "Unknown",
+                            evaluateeId: targetId,
+                            evaluateeName: target?.displayName || "Unknown",
+                            type: bulkType,
+                            status: "pending",
+                            createdAt: Timestamp.now()
+                        });
+                    });
+                }
+            });
+
+            await batch.commit();
+            setShowBulkModal(false);
+            setBulkReviewees(new Set());
+            setBulkReviewers(new Set());
+            fetchSubData();
+        } catch (error) {
+            console.error("Error in bulk assignment:", error);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const handleBatchDeleteAssignments = async () => {
+        if (assignmentSelection.size === 0) return;
+        if (!confirm(`Are you sure you want to delete ${assignmentSelection.size} assignments?`)) return;
+
+        setIsSaving(true);
+        try {
+            const batch = writeBatch(db);
+            assignmentSelection.forEach(aId => {
+                batch.delete(doc(db, `periods/${id}/assignments`, aId));
+            });
+            await batch.commit();
+            setAssignmentSelection(new Set());
+            fetchSubData();
+        } catch (error) {
+            console.error("Error batch deleting assignments:", error);
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -604,13 +695,31 @@ export default function PeriodDetailPage() {
                 {activeTab === "assignments" && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                         <div className="flex items-center justify-between">
-                            <button
-                                onClick={() => setIsAddingAssignment(true)}
-                                className="flex cursor-pointer items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200"
-                            >
-                                <UserPlus className="h-4 w-4" />
-                                New Assignment
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => setIsAddingAssignment(true)}
+                                    className="flex cursor-pointer items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-medium text-zinc-900 ring-1 ring-zinc-200 transition-all hover:bg-zinc-50 dark:bg-zinc-900 dark:text-zinc-100 dark:ring-zinc-800 dark:hover:bg-zinc-800"
+                                >
+                                    <UserPlus className="h-4 w-4" />
+                                    New Assignment
+                                </button>
+                                <button
+                                    onClick={() => setShowBulkModal(true)}
+                                    className="flex cursor-pointer items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
+                                >
+                                    <Users className="h-4 w-4" />
+                                    Bulk Wizard
+                                </button>
+                                {assignmentSelection.size > 0 && (
+                                    <button
+                                        onClick={handleBatchDeleteAssignments}
+                                        className="flex cursor-pointer items-center gap-2 rounded-xl bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition-all hover:bg-red-100 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                        Delete Selected ({assignmentSelection.size})
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         {isAddingAssignment && (
@@ -680,6 +789,24 @@ export default function PeriodDetailPage() {
                                 <table className="w-full text-left">
                                     <thead>
                                         <tr className="border-b border-zinc-100 bg-zinc-50/50 text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:border-zinc-800 dark:bg-zinc-950/20">
+                                            <th className="px-6 py-4 w-10">
+                                                <button
+                                                    onClick={() => {
+                                                        if (assignmentSelection.size === assignments.length) {
+                                                            setAssignmentSelection(new Set());
+                                                        } else {
+                                                            setAssignmentSelection(new Set(assignments.map(a => a.id)));
+                                                        }
+                                                    }}
+                                                    className="text-zinc-300 hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
+                                                >
+                                                    {assignmentSelection.size === assignments.length && assignments.length > 0 ? (
+                                                        <CheckSquare className="h-5 w-5 text-zinc-900 dark:text-zinc-50" />
+                                                    ) : (
+                                                        <Square className="h-5 w-5" />
+                                                    )}
+                                                </button>
+                                            </th>
                                             <th className="px-6 py-4">Evaluator</th>
                                             <th className="px-6 py-4">Evaluatee</th>
                                             <th className="px-6 py-4">Relationship</th>
@@ -688,7 +815,24 @@ export default function PeriodDetailPage() {
                                     </thead>
                                     <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                                         {assignments.map((a) => (
-                                            <tr key={a.id} className="group hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                                            <tr
+                                                key={a.id}
+                                                onClick={() => {
+                                                    const next = new Set(assignmentSelection);
+                                                    if (next.has(a.id)) next.delete(a.id); else next.add(a.id);
+                                                    setAssignmentSelection(next);
+                                                }}
+                                                className={`group hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer ${assignmentSelection.has(a.id) ? "bg-zinc-50 dark:bg-zinc-800/50" : ""}`}
+                                            >
+                                                <td className="px-6 py-4">
+                                                    <div className="text-zinc-300 hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors">
+                                                        {assignmentSelection.has(a.id) ? (
+                                                            <CheckSquare className="h-5 w-5 text-zinc-900 dark:text-zinc-50" />
+                                                        ) : (
+                                                            <Square className="h-5 w-5" />
+                                                        )}
+                                                    </div>
+                                                </td>
                                                 <td className="px-6 py-4">
                                                     <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.evaluatorName}</div>
                                                 </td>
@@ -699,7 +843,13 @@ export default function PeriodDetailPage() {
                                                     <span className="text-xs font-medium text-zinc-500">{a.type}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
-                                                    <button onClick={() => handleDeleteAssignment(a.id)} className="rounded-lg p-2 text-zinc-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 cursor-pointer">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteAssignment(a.id);
+                                                        }}
+                                                        className="rounded-lg p-2 text-zinc-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 cursor-pointer"
+                                                    >
                                                         <Trash2 className="h-4 w-4" />
                                                     </button>
                                                 </td>
@@ -800,6 +950,195 @@ export default function PeriodDetailPage() {
                                     >
                                         {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                                         Import Selected
+                                    </button>
+                                </div>
+                            </footer>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Bulk Assignment Wizard Modal */}
+            <AnimatePresence>
+                {showBulkModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowBulkModal(false)}
+                            className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative w-full max-w-4xl overflow-hidden rounded-[2.5rem] bg-white shadow-2xl dark:bg-zinc-900 flex flex-col max-h-[90vh]"
+                        >
+                            <header className="flex items-center justify-between border-b border-zinc-100 p-8 dark:border-zinc-800">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Bulk Assignment Wizard</h2>
+                                    <p className="text-sm text-zinc-500 mt-1">Scale your review process in seconds</p>
+                                </div>
+                                <button
+                                    onClick={() => setShowBulkModal(false)}
+                                    className="rounded-full p-2 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                >
+                                    <X className="h-6 w-6" />
+                                </button>
+                            </header>
+
+                            <div className="flex-1 overflow-y-auto">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 divide-x divide-zinc-100 dark:divide-zinc-800">
+                                    {/* Left: Select Reviewees */}
+                                    <div className="p-8 space-y-6">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400">1. Select Reviewees ({bulkReviewees.size})</h3>
+                                            <button
+                                                onClick={() => {
+                                                    const filtered = users.filter(u => bulkDept === "All" || u.department === bulkDept);
+                                                    setBulkReviewees(new Set(filtered.map(u => u.uid)));
+                                                }}
+                                                className="text-[10px] font-bold uppercase text-cobalt-600 hover:underline"
+                                            >
+                                                Select All Visible
+                                            </button>
+                                        </div>
+
+                                        <div className="flex gap-2">
+                                            <div className="relative flex-1">
+                                                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+                                                <input
+                                                    placeholder="Search people..."
+                                                    value={bulkSearch}
+                                                    onChange={e => setBulkSearch(e.target.value)}
+                                                    className="w-full rounded-xl bg-zinc-50 pl-9 py-2 text-xs border-none focus:ring-1 focus:ring-zinc-900 dark:bg-zinc-800"
+                                                />
+                                            </div>
+                                            <select
+                                                value={bulkDept}
+                                                onChange={e => setBulkDept(e.target.value)}
+                                                className="rounded-xl bg-zinc-50 border-none text-xs px-3 dark:bg-zinc-800"
+                                            >
+                                                <option>All</option>
+                                                {Array.from(new Set(users.map(u => u.department).filter(Boolean))).map(d => (
+                                                    <option key={d}>{d}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="space-y-1 max-h-[300px] overflow-y-auto px-1">
+                                            {users.filter(u =>
+                                                (bulkDept === "All" || u.department === bulkDept) &&
+                                                (u.displayName.toLowerCase().includes(bulkSearch.toLowerCase()))
+                                            ).map(u => {
+                                                const isSelected = bulkReviewees.has(u.uid);
+                                                return (
+                                                    <div
+                                                        key={u.uid}
+                                                        onClick={() => {
+                                                            const next = new Set(bulkReviewees);
+                                                            if (isSelected) next.delete(u.uid); else next.add(u.uid);
+                                                            setBulkReviewees(next);
+                                                        }}
+                                                        className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${isSelected ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-lg" : "hover:bg-zinc-50 dark:hover:bg-zinc-800"}`}
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-[10px] ${isSelected ? "bg-white/20" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"}`}>
+                                                                {u.displayName.charAt(0)}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[11px] font-bold">{u.displayName}</p>
+                                                                <p className={`text-[9px] ${isSelected ? "text-zinc-400" : "text-zinc-500"}`}>{u.department || "No Dept"}</p>
+                                                            </div>
+                                                        </div>
+                                                        {isSelected && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Right: Setup Relationship & Reviewers */}
+                                    <div className="p-8 space-y-8 bg-zinc-50/50 dark:bg-zinc-950/20">
+                                        <div className="space-y-4">
+                                            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400">2. Define Relationship</h3>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {["Peer to Peer", "Manager to Employee", "Employee to Manager", "Self"].map(t => (
+                                                    <button
+                                                        key={t}
+                                                        onClick={() => setBulkType(t as any)}
+                                                        className={`py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all ${bulkType === t ? "bg-zinc-900 text-white border-zinc-900 shadow-md dark:bg-zinc-100 dark:text-zinc-950" : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-400 dark:bg-zinc-900 dark:border-zinc-800"}`}
+                                                    >
+                                                        {t}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {bulkType !== "Self" && (
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400">3. Select Reviewer(s) ({bulkReviewers.size})</h3>
+                                                    <button
+                                                        onClick={() => setBulkReviewers(new Set())}
+                                                        className="text-[10px] font-bold uppercase text-zinc-400 hover:text-zinc-600"
+                                                    >
+                                                        Clear
+                                                    </button>
+                                                </div>
+                                                <div className="space-y-1 max-h-[250px] overflow-y-auto px-1">
+                                                    {users.map(u => {
+                                                        const isSelected = bulkReviewers.has(u.uid);
+                                                        return (
+                                                            <div
+                                                                key={u.uid}
+                                                                onClick={() => {
+                                                                    const next = new Set(bulkReviewers);
+                                                                    if (isSelected) next.delete(u.uid); else next.add(u.uid);
+                                                                    setBulkReviewers(next);
+                                                                }}
+                                                                className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${isSelected ? "bg-cobalt-600 text-white shadow-lg" : "hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}
+                                                            >
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-[10px] ${isSelected ? "bg-white/20" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 text-zinc-400"}`}>
+                                                                        {u.displayName.charAt(0)}
+                                                                    </div>
+                                                                    <p className="text-[11px] font-bold">{u.displayName}</p>
+                                                                </div>
+                                                                {isSelected && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <footer className="border-t border-zinc-100 p-8 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900">
+                                <div>
+                                    <p className="text-xs font-medium text-zinc-500 italic">
+                                        Total assignments to be created: <span className="text-zinc-900 dark:text-zinc-50 font-bold">
+                                            {bulkType === "Self" ? bulkReviewees.size : bulkReviewees.size * bulkReviewers.size}
+                                        </span>
+                                    </p>
+                                </div>
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => setShowBulkModal(false)}
+                                        className="px-6 py-3 text-sm font-bold text-zinc-400 hover:text-zinc-900"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleBulkSubmit}
+                                        disabled={isGenerating || bulkReviewees.size === 0 || (bulkType !== "Self" && bulkReviewers.size === 0)}
+                                        className="flex items-center gap-2 rounded-2xl bg-zinc-900 px-8 py-3 text-sm font-black text-white transition-all hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200"
+                                    >
+                                        {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                                        Generate Assignments
                                     </button>
                                 </div>
                             </footer>
