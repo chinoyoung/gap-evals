@@ -27,6 +27,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { ItemActions } from "@/components/ui/ItemActions";
+import { EmptyState } from "@/components/ui/EmptyState";
+
 interface Department {
     id: string;
     name: string;
@@ -133,22 +140,20 @@ export default function DepartmentsPage() {
 
     return (
         <div className="space-y-8">
-            <header className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Departments</h1>
-                    <p className="mt-2 text-zinc-500 dark:text-zinc-400">Organize your team members into functional groups.</p>
-                </div>
-                <button
+            <PageHeader
+                title="Departments"
+                description="Organize your team members into functional groups."
+            >
+                <Button
                     onClick={() => {
                         resetForm();
                         setIsAdding(true);
                     }}
-                    className="flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200"
+                    icon={Plus}
                 >
-                    <Plus className="h-4 w-4" />
                     New Department
-                </button>
-            </header>
+                </Button>
+            </PageHeader>
 
             <AnimatePresence>
                 {isAdding && (
@@ -156,49 +161,39 @@ export default function DepartmentsPage() {
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800"
                     >
-                        <form onSubmit={handleFormSubmit} className="space-y-6">
-                            <div className="grid gap-6 sm:grid-cols-2">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Department Name</label>
-                                    <input
+                        <Card className="p-8">
+                            <form onSubmit={handleFormSubmit} className="space-y-6">
+                                <div className="grid gap-6 sm:grid-cols-2">
+                                    <Input
+                                        label="Department Name"
                                         autoFocus
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
                                         placeholder="e.g. Engineering, Marketing, HR"
-                                        className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800"
                                     />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Description (Optional)</label>
-                                    <input
+                                    <Input
+                                        label="Description (Optional)"
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}
                                         placeholder="Brief description of the department"
-                                        className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800"
                                     />
                                 </div>
-                            </div>
 
-                            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                                <button
-                                    type="button"
-                                    onClick={resetForm}
-                                    className="rounded-xl px-4 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={submitting || !name.trim()}
-                                    className="flex items-center gap-2 rounded-xl bg-zinc-900 px-6 py-2 text-sm font-medium text-white transition-all disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-950"
-                                >
-                                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                                    {editingId ? "Update Department" : "Create Department"}
-                                </button>
-                            </div>
-                        </form>
+                                <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                                    <Button variant="ghost" type="button" onClick={resetForm}>
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        loading={submitting}
+                                        disabled={!name.trim()}
+                                    >
+                                        {editingId ? "Update Department" : "Create Department"}
+                                    </Button>
+                                </div>
+                            </form>
+                        </Card>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -211,7 +206,7 @@ export default function DepartmentsPage() {
                         placeholder="Search departments..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full rounded-xl border-zinc-200 bg-white pl-10 pr-4 py-2 text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-800 dark:bg-zinc-900"
+                        className="w-full rounded-xl border-zinc-200 bg-white pl-10 pr-4 py-2 text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-800 dark:bg-zinc-900 shadow-sm"
                     />
                 </div>
 
@@ -221,49 +216,52 @@ export default function DepartmentsPage() {
                             <div key={i} className="h-40 animate-pulse rounded-3xl bg-zinc-100 dark:bg-zinc-800" />
                         ))
                     ) : filteredDepartments.length === 0 ? (
-                        <div className="col-span-full py-12 text-center rounded-3xl border-2 border-dashed border-zinc-100 dark:border-zinc-800">
-                            <Building2 className="mx-auto h-12 w-12 text-zinc-200" />
-                            <p className="mt-4 text-zinc-500 italic">No departments found.</p>
-                        </div>
+                        <EmptyState
+                            className="col-span-full py-20"
+                            icon={Building2}
+                            title="No departments found"
+                            description="Organize your team members into functional groups."
+                        />
                     ) : (
                         filteredDepartments.map((dept) => (
-                            <motion.div
-                                layout
-                                key={dept.id}
-                                className="group relative overflow-hidden rounded-3xl bg-white p-6 shadow-sm ring-1 ring-zinc-200 transition-all hover:shadow-md dark:bg-zinc-900 dark:ring-zinc-800"
-                            >
-                                <div className="flex items-start justify-between">
-                                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-900 dark:bg-white dark:text-zinc-950">
-                                        <Building2 className="h-6 w-6" />
+                            <motion.div layout key={dept.id} className="group">
+                                <Card className="p-6 relative isolate">
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-900 dark:bg-white dark:text-zinc-950">
+                                            <Building2 className="h-6 w-6" />
+                                        </div>
+                                        <ItemActions>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => startEditing(dept)}
+                                            >
+                                                <Edit2 className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant="danger"
+                                                size="icon"
+                                                className="bg-transparent hover:bg-red-50"
+                                                onClick={() => handleDelete(dept.id)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </ItemActions>
                                     </div>
-                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                        <button
-                                            onClick={() => startEditing(dept)}
-                                            className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
-                                        >
-                                            <Edit2 className="h-4 w-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(dept.id)}
-                                            className="rounded-lg p-2 text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/10"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
+                                    <div className="mt-4">
+                                        <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">{dept.name}</h3>
+                                        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2">
+                                            {dept.description || "No description provided."}
+                                        </p>
                                     </div>
-                                </div>
-                                <div className="mt-4">
-                                    <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">{dept.name}</h3>
-                                    <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2">
-                                        {dept.description || "No description provided."}
-                                    </p>
-                                </div>
-                                <Link
-                                    href={`/dashboard/team?dept=${dept.id}`}
-                                    className="mt-6 flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors"
-                                >
-                                    <span>Manage Members</span>
-                                    <ChevronRight className="h-3 w-3" />
-                                </Link>
+                                    <Link
+                                        href={`/dashboard/team?dept=${dept.id}`}
+                                        className="mt-6 flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors"
+                                    >
+                                        <span>Manage Members</span>
+                                        <ChevronRight className="h-3 w-3" />
+                                    </Link>
+                                </Card>
                             </motion.div>
                         ))
                     )}

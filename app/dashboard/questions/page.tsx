@@ -49,14 +49,16 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 
-interface Question {
-    id: string;
-    text: string;
-    type: "scale" | "paragraph";
-    order: number;
-    scope?: "all" | "self";
-    createdAt: any;
-}
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { ItemActions } from "@/components/ui/ItemActions";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Loading } from "@/components/ui/Loading";
+import { Badge } from "@/components/ui/Badge";
+
+import { QuestionItem, Question } from "@/components/ui/QuestionItem";
 
 function SortableQuestionItem({
     q,
@@ -84,49 +86,15 @@ function SortableQuestionItem({
     };
 
     return (
-        <div
-            ref={setNodeRef}
-            style={style}
-            className={`group flex items-center justify-between p-4 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 ${isDragging ? "bg-white shadow-xl dark:bg-zinc-900 border-x border-zinc-200 dark:border-zinc-800" : ""
-                }`}
-        >
-            <div className="flex items-center gap-4">
-                <button
-                    {...attributes}
-                    {...listeners}
-                    className="cursor-grab text-zinc-300 hover:text-zinc-600 dark:text-zinc-700 dark:hover:text-zinc-400 active:cursor-grabbing"
-                >
-                    <GripVertical className="h-5 w-5" />
-                </button>
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${q.type === "scale" ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"
-                    } dark:bg-zinc-800`}>
-                    {q.type === "scale" ? <Hash className="h-5 w-5" /> : <Type className="h-5 w-5" />}
-                </div>
-                <div>
-                    <h4 className="font-medium text-sm text-zinc-900 dark:text-zinc-50">{q.text}</h4>
-                    <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{q.type}</span>
-                        <span className="h-1 w-1 rounded-full bg-zinc-300" />
-                        <span className={`text-[10px] font-bold uppercase tracking-wider ${q.scope === 'self' ? 'text-amber-600' : 'text-zinc-400'}`}>
-                            {q.scope === 'self' ? 'Self Review Only' : 'Visible to All'}
-                        </span>
-                    </div>
-                </div>
-            </div>
-            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                <button
-                    onClick={() => onEdit(q)}
-                    className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 cursor-pointer"
-                >
-                    <Edit2 className="h-4 w-4" />
-                </button>
-                <button
-                    onClick={() => onDelete(q.id)}
-                    className="rounded-lg p-2 text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/10 cursor-pointer"
-                >
-                    <Trash2 className="h-4 w-4" />
-                </button>
-            </div>
+        <div ref={setNodeRef} style={style}>
+            <QuestionItem
+                question={q}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                showGrip
+                dragHandleProps={{ ...attributes, ...listeners }}
+                isDragging={isDragging}
+            />
         </div>
     );
 }
@@ -156,14 +124,12 @@ export default function QuestionsPage() {
 
     const fetchQuestions = async () => {
         try {
-            // Fetch all questions. We sort in memory to support legacy questions without an 'order' field.
             const snapshot = await getDocs(collection(db, "questions"));
             const data = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             } as Question));
 
-            // Sort by order, then by createdAt if order is missing
             const sortedData = data.sort((a, b) => {
                 const orderA = a.order !== undefined ? a.order : 999;
                 const orderB = b.order !== undefined ? b.order : 999;
@@ -171,7 +137,7 @@ export default function QuestionsPage() {
 
                 const timeA = a.createdAt?.toMillis?.() || 0;
                 const timeB = b.createdAt?.toMillis?.() || 0;
-                return timeB - timeA; // Newer first if No order
+                return timeB - timeA;
             });
 
             setQuestions(sortedData);
@@ -222,7 +188,6 @@ export default function QuestionsPage() {
             const newOrder = arrayMove(questions, oldIndex, newIndex);
             setQuestions(newOrder);
 
-            // Update orders in Firestore
             try {
                 const batch = writeBatch(db);
                 newOrder.forEach((q, index) => {
@@ -278,22 +243,14 @@ export default function QuestionsPage() {
 
     return (
         <div className="space-y-8">
-            <header className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Questions Library</h1>
-                    <p className="mt-2 text-zinc-500 dark:text-zinc-400">Manage template questions that can be imported into evaluation periods.</p>
-                </div>
-                <button
-                    onClick={() => {
-                        resetForm();
-                        setIsAdding(true);
-                    }}
-                    className="flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200"
-                >
-                    <Plus className="h-4 w-4" />
+            <PageHeader
+                title="Questions Library"
+                description="Manage template questions that can be imported into evaluation periods."
+            >
+                <Button onClick={() => { resetForm(); setIsAdding(true); }} icon={Plus}>
                     Add Question
-                </button>
-            </header>
+                </Button>
+            </PageHeader>
 
             <AnimatePresence>
                 {isAdding && (
@@ -301,80 +258,62 @@ export default function QuestionsPage() {
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800"
                     >
-                        <form onSubmit={handleFormSubmit} className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                                    {editingId ? "Update Question" : "New Question"}
-                                </label>
-                                <input
+                        <Card className="p-8">
+                            <form onSubmit={handleFormSubmit} className="space-y-6">
+                                <Input
+                                    label={editingId ? "Update Question" : "New Question"}
                                     autoFocus
                                     value={newText}
                                     onChange={(e) => setNewText(e.target.value)}
                                     placeholder="e.g. How well does this team member communicate?"
-                                    className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm transition-all focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:focus:border-zinc-100 dark:focus:ring-zinc-100"
                                 />
-                            </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Field Type</label>
-                                    <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
-                                        <button
-                                            type="button"
-                                            onClick={() => setNewType("scale")}
-                                            className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${newType === "scale" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white" : "text-zinc-500"}`}
-                                        >
-                                            <Hash className="h-3.5 w-3.5" /> Scale
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setNewType("paragraph")}
-                                            className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${newType === "paragraph" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white" : "text-zinc-500"}`}
-                                        >
-                                            <Type className="h-3.5 w-3.5" /> Text
-                                        </button>
+                                <div className="grid grid-cols-2 gap-8">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Field Type</label>
+                                        <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+                                            {(["scale", "paragraph"] as const).map((type) => (
+                                                <button
+                                                    key={type}
+                                                    type="button"
+                                                    onClick={() => setNewType(type)}
+                                                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${newType === type ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white" : "text-zinc-500"}`}
+                                                >
+                                                    {type === "scale" ? <Hash className="h-3.5 w-3.5" /> : <Type className="h-3.5 w-3.5" />}
+                                                    {type === "scale" ? "Scale" : "Text"}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div className="col-span-2 pt-2">
-                                    <label className="flex items-center gap-3 cursor-pointer group">
+                                    <div className="flex items-center gap-3 pt-6">
                                         <div
                                             onClick={() => setNewScope(newScope === "self" ? "all" : "self")}
-                                            className={`h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-all ${newScope === "self"
+                                            className={`h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-all cursor-pointer ${newScope === "self"
                                                 ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:border-zinc-100 dark:text-zinc-950"
-                                                : "border-zinc-200 group-hover:border-zinc-400 dark:border-zinc-700 dark:group-hover:border-zinc-500"
+                                                : "border-zinc-200 hover:border-zinc-400 dark:border-zinc-700"
                                                 }`}
                                         >
                                             {newScope === "self" && <Check className="h-4 w-4" strokeWidth={3} />}
                                         </div>
-                                        <div onClick={() => setNewScope(newScope === "self" ? "all" : "self")}>
-                                            <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Self-Evaluation Only</p>
-                                            <p className="text-xs text-zinc-500">Enable this if the question should only be visible for self-reflections.</p>
+                                        <div className="cursor-pointer select-none" onClick={() => setNewScope(newScope === "self" ? "all" : "self")}>
+                                            <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50 leading-tight">Self-Evaluation Only</p>
+                                            <p className="text-[11px] text-zinc-500">Only visible for self-reflections.</p>
                                         </div>
-                                    </label>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="flex justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={resetForm}
-                                    className="rounded-xl px-4 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={submitting || !newText.trim()}
-                                    className="flex items-center gap-2 rounded-xl bg-zinc-900 px-6 py-2 text-sm font-medium text-white transition-all disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-950"
-                                >
-                                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                                    {editingId ? "Update Question" : "Save Question"}
-                                </button>
-                            </div>
-                        </form>
+                                <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                                    <Button variant="ghost" type="button" onClick={resetForm}>
+                                        Cancel
+                                    </Button>
+                                    <Button type="submit" loading={submitting} disabled={!newText.trim()}>
+                                        {editingId ? "Update Question" : "Save Question"}
+                                    </Button>
+                                </div>
+                            </form>
+                        </Card>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -392,7 +331,7 @@ export default function QuestionsPage() {
                                 onClick={() => setTypeFilter(filter)}
                                 className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all capitalize cursor-pointer ${typeFilter === filter
                                     ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
-                                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400"
                                     }`}
                             >
                                 {filter}
@@ -401,15 +340,16 @@ export default function QuestionsPage() {
                     </div>
                 </div>
 
-                <div className="rounded-3xl bg-white shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800 overflow-hidden">
+                <Card className="overflow-hidden">
                     {loading ? (
-                        <div className="flex items-center justify-center py-20">
-                            <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
-                        </div>
+                        <Loading className="py-20" />
                     ) : filteredQuestions.length === 0 ? (
-                        <div className="py-20 text-center">
-                            <p className="text-zinc-500 italic">No questions found matching this filter.</p>
-                        </div>
+                        <EmptyState
+                            className="border-none py-20"
+                            icon={Filter}
+                            title="No questions found"
+                            description="No questions found matching this filter."
+                        />
                     ) : (
                         <DndContext
                             sensors={sensors}
@@ -434,7 +374,7 @@ export default function QuestionsPage() {
                             </SortableContext>
                         </DndContext>
                     )}
-                </div>
+                </Card>
             </div>
         </div>
     );

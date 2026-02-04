@@ -16,15 +16,11 @@ import {
     UserCircle,
     BarChart3,
     Building2,
-    CalendarDays
+    CalendarDays,
+    ChevronRight
 } from "lucide-react";
 import Link from "next/link";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
+import { cn } from "@/lib/utils";
 
 export default function DashboardLayout({
     children,
@@ -45,7 +41,7 @@ export default function DashboardLayout({
     if (loading || !user) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-900 border-t-transparent dark:border-zinc-100"></div>
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-zinc-900 border-t-transparent dark:border-zinc-100"></div>
             </div>
         );
     }
@@ -69,12 +65,18 @@ export default function DashboardLayout({
     return (
         <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950">
             {/* Sidebar - Desktop */}
-            <aside className="hidden w-64 flex-col border-r border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 lg:flex">
-                <div className="mb-10 flex items-center gap-3 px-2">
-                    <span className="text-lg font-semibold tracking-tight">GAP Evaluator</span>
+            <aside className="hidden w-72 flex-col border-r border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 lg:flex sticky top-0 h-screen">
+                <div className="mb-10 flex items-center gap-3 px-3 py-2">
+                    <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-xl shadow-zinc-900/10">
+                        <ClipboardCheck className="h-6 w-6" />
+                    </div>
+                    <div>
+                        <span className="text-xl font-black tracking-tight block">GAP Evaluator</span>
+                        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">@goabroad.com</span>
+                    </div>
                 </div>
 
-                <nav className="flex-1 space-y-1">
+                <nav className="flex-1 space-y-1 overflow-y-auto pr-2 custom-scrollbar">
                     {navItems.map((item) => {
                         const isActive = pathname === item.href;
                         return (
@@ -82,54 +84,63 @@ export default function DashboardLayout({
                                 key={item.href}
                                 href={item.href}
                                 className={cn(
-                                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
+                                    "group flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition-all",
                                     isActive
-                                        ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
-                                        : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-50"
+                                        ? "bg-zinc-900 text-white shadow-xl shadow-zinc-900/10 dark:bg-white dark:text-zinc-900"
+                                        : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
                                 )}
                             >
-                                <item.icon className={cn("h-4.5 w-4.5", isActive ? "text-zinc-900 dark:text-zinc-50" : "text-zinc-400")} />
-                                {item.name}
+                                <div className="flex items-center gap-3">
+                                    <item.icon className={cn("h-5 w-5 transition-colors", isActive ? "text-white dark:text-zinc-900" : "text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-50")} />
+                                    {item.name}
+                                </div>
+                                {isActive && <ChevronRight className="h-4 w-4" />}
                             </Link>
                         );
                     })}
                 </nav>
 
-                <div className="mt-auto border-t border-zinc-100 pt-6 dark:border-zinc-800">
-                    <div className="flex items-center gap-3 px-2 mb-6">
-                        <img
-                            src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}`}
-                            className="h-8 w-8 rounded-full ring-2 ring-zinc-100 dark:ring-zinc-800"
-                            alt={user.displayName || ""}
-                        />
+                <div className="mt-auto pt-6">
+                    <div className="flex items-center gap-4 px-3 py-4 rounded-3xl bg-zinc-50 dark:bg-zinc-800/50 mb-6 group cursor-default">
+                        <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full ring-2 ring-zinc-200 dark:ring-zinc-700 transition-all group-hover:ring-zinc-400">
+                            <img
+                                src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}&background=18181b&color=fff`}
+                                className="h-full w-full object-cover"
+                                alt={user.displayName || ""}
+                            />
+                        </div>
                         <div className="flex flex-col overflow-hidden">
-                            <span className="truncate text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                            <span className="truncate text-sm font-bold text-zinc-900 dark:text-zinc-100">
                                 {user.displayName}
                             </span>
-                            <span className="truncate text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                                {role}
+                            <span className="truncate text-[10px] font-black uppercase tracking-[0.1em] text-zinc-400">
+                                {role} Account
                             </span>
                         </div>
                     </div>
                     <button
                         onClick={() => logOut()}
-                        className="flex w-full items-center justify-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 transition-all hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 bg-red-600/20 hover:cursor-pointer"
+                        className="group flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3.5 text-sm font-bold text-red-600 transition-all hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/10 border-2 border-transparent"
                     >
+                        <LogOut className="h-4.5 w-4.5 transition-transform group-hover:-translate-x-1" />
                         Sign Out
                     </button>
                 </div>
             </aside>
 
             {/* Mobile Header */}
-            <div className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between bg-white border-b border-zinc-200 px-4 py-3 dark:bg-zinc-900 dark:border-zinc-800">
-                <div className="flex items-center gap-2">
-                    <span className="font-semibold">GAP Evaluator</span>
+            <div className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between bg-white/80 backdrop-blur-md border-b border-zinc-200 px-6 py-4 dark:bg-zinc-950/80 dark:border-zinc-800">
+                <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 flex items-center justify-center rounded-lg bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
+                        <ClipboardCheck className="h-5 w-5" />
+                    </div>
+                    <span className="font-black tracking-tight">GAP Evaluator</span>
                 </div>
                 <button
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    className="p-2 text-zinc-500 dark:text-zinc-400"
+                    className="p-2 h-10 w-10 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
                 >
-                    {isMobileMenuOpen ? <X /> : <Menu />}
+                    {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                 </button>
             </div>
 
@@ -137,10 +148,10 @@ export default function DashboardLayout({
             <AnimatePresence>
                 {isMobileMenuOpen && (
                     <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        className="fixed inset-0 z-40 lg:hidden bg-white dark:bg-zinc-900 pt-20 p-6"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="fixed inset-0 z-40 lg:hidden bg-white dark:bg-zinc-950 pt-24 p-6"
                     >
                         <nav className="space-y-2">
                             {navItems.map((item) => (
@@ -149,35 +160,43 @@ export default function DashboardLayout({
                                     href={item.href}
                                     onClick={() => setIsMobileMenuOpen(false)}
                                     className={cn(
-                                        "flex items-center gap-3 rounded-xl px-4 py-4 text-lg font-medium transition-all border border-transparent",
+                                        "flex items-center gap-4 rounded-2xl px-5 py-5 text-lg font-bold transition-all",
                                         pathname === item.href
-                                            ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
-                                            : "text-zinc-500"
+                                            ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                                            : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-900"
                                     )}
                                 >
                                     <item.icon className="h-6 w-6" />
                                     {item.name}
                                 </Link>
                             ))}
-                            <button
-                                onClick={() => {
-                                    logOut();
-                                    setIsMobileMenuOpen(false);
-                                }}
-                                className="flex w-full items-center gap-3 rounded-xl px-4 py-4 text-lg font-medium text-red-600 transition-all border border-transparent"
-                            >
-                                <LogOut className="h-6 w-6" />
-                                Sign Out
-                            </button>
+                            <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-zinc-800">
+                                <button
+                                    onClick={() => {
+                                        logOut();
+                                        setIsMobileMenuOpen(false);
+                                    }}
+                                    className="flex w-full items-center gap-4 rounded-2xl px-5 py-5 text-lg font-bold text-red-600"
+                                >
+                                    <LogOut className="h-6 w-6" />
+                                    Sign Out
+                                </button>
+                            </div>
                         </nav>
                     </motion.div>
                 )}
             </AnimatePresence>
 
             {/* Main Content */}
-            <main className="flex-1 p-6 lg:p-10 pt-24 lg:pt-10 overflow-y-auto">
+            <main className="flex-1 p-6 lg:p-12 pt-28 lg:pt-12 min-h-screen overflow-y-auto">
                 <div className="mx-auto max-w-5xl">
-                    {children}
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4 }}
+                    >
+                        {children}
+                    </motion.div>
                 </div>
             </main>
         </div>

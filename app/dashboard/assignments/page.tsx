@@ -19,10 +19,18 @@ import {
     Trash2,
     User,
     ArrowRight,
-    Loader2,
     Users,
     AlertCircle
 } from "lucide-react";
+
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Select } from "@/components/ui/Select";
+import { Badge } from "@/components/ui/Badge";
+import { ItemActions } from "@/components/ui/ItemActions";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Loading } from "@/components/ui/Loading";
 
 interface UserProfile {
     id: string;
@@ -143,19 +151,14 @@ export default function AssignmentsPage() {
 
     return (
         <div className="space-y-8">
-            <header className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Evaluation Assignments</h1>
-                    <p className="mt-2 text-zinc-500 dark:text-zinc-400">Assign evaluators to team members.</p>
-                </div>
-                <button
-                    onClick={() => setIsAdding(true)}
-                    className="flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200"
-                >
-                    <Plus className="h-4 w-4" />
+            <PageHeader
+                title="Evaluation Assignments"
+                description="Assign evaluators to team members."
+            >
+                <Button onClick={() => setIsAdding(true)} icon={Plus}>
                     New Assignment
-                </button>
-            </header>
+                </Button>
+            </PageHeader>
 
             <AnimatePresence>
                 {isAdding && (
@@ -163,79 +166,68 @@ export default function AssignmentsPage() {
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800"
                     >
-                        <form onSubmit={handleAddAssignment} className="space-y-6">
-                            <div className={`grid gap-6 ${type === "self" ? "sm:grid-cols-1" : "sm:grid-cols-2"}`}>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                                        {type === "self" ? "Team Member" : "Evaluator"}
-                                    </label>
-                                    <select
+                        <Card className="p-8">
+                            <form onSubmit={handleAddAssignment} className="space-y-6">
+                                <div className={`grid gap-6 ${type === "self" ? "sm:grid-cols-1" : "sm:grid-cols-2"}`}>
+                                    <Select
+                                        label={type === "self" ? "Team Member" : "Evaluator"}
                                         value={evaluator}
                                         onChange={(e) => setEvaluator(e.target.value)}
-                                        className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800"
                                     >
                                         <option value="">Select person</option>
                                         {users.map(u => (
                                             <option key={u.id} value={u.id}>{u.displayName || u.email}</option>
                                         ))}
-                                    </select>
-                                </div>
-                                {type !== "self" && (
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Evaluatee</label>
-                                        <select
+                                    </Select>
+
+                                    {type !== "self" && (
+                                        <Select
+                                            label="Evaluatee"
                                             value={evaluatee}
                                             onChange={(e) => setEvaluatee(e.target.value)}
-                                            className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800"
                                         >
                                             <option value="">Select Team Member</option>
                                             {users.map(u => (
                                                 <option key={u.id} value={u.id}>{u.displayName || u.email}</option>
                                             ))}
-                                        </select>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Relationship Type</label>
-                                <div className="flex flex-wrap gap-3">
-                                    {["peer", "manager-to-employee", "employee-to-manager", "self"].map((t) => (
-                                        <button
-                                            key={t}
-                                            type="button"
-                                            onClick={() => setType(t as any)}
-                                            className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${type === t
-                                                ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
-                                                : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400"
-                                                }`}
-                                        >
-                                            {t.replace(/-/g, " ")}
-                                        </button>
-                                    ))}
+                                        </Select>
+                                    )}
                                 </div>
-                            </div>
 
-                            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsAdding(false)}
-                                    className="rounded-xl px-4 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={submitting || !evaluator || (type !== "self" && !evaluatee)}
-                                    className="flex items-center gap-2 rounded-xl bg-zinc-900 px-6 py-2 text-sm font-medium text-white transition-all disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-950"
-                                >
-                                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                                    Assign
-                                </button>
-                            </div>
-                        </form>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Relationship Type</label>
+                                    <div className="flex flex-wrap gap-3">
+                                        {["peer", "manager-to-employee", "employee-to-manager", "self"].map((t) => (
+                                            <button
+                                                key={t}
+                                                type="button"
+                                                onClick={() => setType(t as any)}
+                                                className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${type === t
+                                                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
+                                                    : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400"
+                                                    }`}
+                                            >
+                                                {t.replace(/-/g, " ")}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                                    <Button variant="ghost" type="button" onClick={() => setIsAdding(false)}>
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        loading={submitting}
+                                        disabled={!evaluator || (type !== "self" && !evaluatee)}
+                                    >
+                                        Assign
+                                    </Button>
+                                </div>
+                            </form>
+                        </Card>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -243,27 +235,29 @@ export default function AssignmentsPage() {
             <div className="space-y-4">
                 <div className="flex items-center gap-4">
                     <div className="text-sm font-medium text-zinc-500">Filter by Department:</div>
-                    <select
-                        value={deptFilter}
-                        onChange={(e) => setDeptFilter(e.target.value)}
-                        className="rounded-xl border-zinc-200 bg-white px-4 py-2 text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-800 dark:bg-zinc-900"
-                    >
-                        <option value="all">All Departments</option>
-                        {departments.map(d => (
-                            <option key={d.id} value={d.id}>{d.name}</option>
-                        ))}
-                    </select>
+                    <div className="w-64">
+                        <Select
+                            value={deptFilter}
+                            onChange={(e) => setDeptFilter(e.target.value)}
+                        >
+                            <option value="all">All Departments</option>
+                            {departments.map(d => (
+                                <option key={d.id} value={d.id}>{d.name}</option>
+                            ))}
+                        </Select>
+                    </div>
                 </div>
 
-                <div className="rounded-3xl bg-white shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800 overflow-hidden">
+                <Card className="overflow-hidden">
                     {loading ? (
-                        <div className="flex items-center justify-center py-20">
-                            <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
-                        </div>
+                        <Loading className="py-20" />
                     ) : filteredAssignments.length === 0 ? (
-                        <div className="py-20 text-center">
-                            <p className="text-zinc-500 italic">No assignments found for this department.</p>
-                        </div>
+                        <EmptyState
+                            className="border-none py-20"
+                            icon={Users}
+                            title="No assignments found"
+                            description="No assignments found for this department."
+                        />
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
@@ -283,7 +277,7 @@ export default function AssignmentsPage() {
                                         const dept = departments.find(d => d.id === evaluatee?.departmentId);
                                         return (
                                             <tr key={a.id} className="group hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                                                <td className="px-6 py-4">
+                                                <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="flex items-center gap-3">
                                                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
                                                             <User className="h-4 w-4" />
@@ -294,7 +288,7 @@ export default function AssignmentsPage() {
                                                 <td className="px-6 py-4 text-center">
                                                     <ArrowRight className="inline h-4 w-4 text-zinc-300" />
                                                 </td>
-                                                <td className="px-6 py-4">
+                                                <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="flex items-center gap-3">
                                                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
                                                             <User className="h-4 w-4" />
@@ -302,23 +296,27 @@ export default function AssignmentsPage() {
                                                         <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.evaluateeName}</span>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4">
+                                                <td className="px-6 py-4 whitespace-nowrap">
                                                     <span className="text-sm text-zinc-500 dark:text-zinc-400">
                                                         {dept?.name || "Unassigned"}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="inline-flex rounded-full bg-zinc-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <Badge variant="zinc">
                                                         {a.type.replace(/-/g, " ")}
-                                                    </span>
+                                                    </Badge>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
-                                                    <button
-                                                        onClick={() => handleDelete(a.id)}
-                                                        className="rounded-lg p-2 text-zinc-400 opacity-0 transition-all hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 dark:hover:bg-red-900/10 cursor-pointer"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
+                                                    <ItemActions>
+                                                        <Button
+                                                            variant="danger"
+                                                            size="icon"
+                                                            className="bg-transparent hover:bg-red-50"
+                                                            onClick={() => handleDelete(a.id)}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </ItemActions>
                                                 </td>
                                             </tr>
                                         );
@@ -327,7 +325,7 @@ export default function AssignmentsPage() {
                             </table>
                         </div>
                     )}
-                </div>
+                </Card>
             </div>
         </div>
     );

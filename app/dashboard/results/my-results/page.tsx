@@ -51,6 +51,39 @@ interface GroupedResult {
     lastSubmitted: any;
 }
 
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
+import { Select } from "@/components/ui/Select";
+import { Loading } from "@/components/ui/Loading";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Badge } from "@/components/ui/Badge";
+
+interface Evaluation {
+    id: string;
+    assignmentId: string;
+    evaluateeId: string;
+    evaluateeName: string;
+    responses: Record<string, any>;
+    submittedAt: any;
+    shared?: boolean;
+    type?: string;
+}
+
+interface Question {
+    id: string;
+    text: string;
+    type: "scale" | "paragraph";
+    order?: number;
+}
+
+interface GroupedResult {
+    type: string;
+    count: number;
+    averages: Record<string, number>;
+    comments: Record<string, string[]>;
+    lastSubmitted: any;
+}
+
 export default function MyResultsPage() {
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
@@ -74,13 +107,11 @@ export default function MyResultsPage() {
 
     const fetchPeriods = async () => {
         try {
-            // 1. Get all periods that have results published
             const publishedPeriodsSnap = await getDocs(query(
                 collection(db, "periods"),
                 where("resultsPublished", "==", true)
             ));
 
-            // 2. Get all evaluations shared with this user (regardless of period status)
             const sharedEvalSnap = await getDocs(query(
                 collection(db, "evaluations"),
                 where("shared", "==", true)
@@ -127,7 +158,6 @@ export default function MyResultsPage() {
             const periodDoc = periods.find(p => p.id === selectedPeriodId);
             const isPublished = periodDoc?.resultsPublished;
 
-            // 1. Fetch questions for the selected period
             const questSnap = await getDocs(query(
                 collection(db, `periods/${selectedPeriodId}/questions`),
                 orderBy("order", "asc")
@@ -135,16 +165,12 @@ export default function MyResultsPage() {
             const qs = questSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Question));
             setQuestions(qs);
 
-            // 2. Fetch evaluations for this period and user
-            // If period results are published, show everything. Otherwise, only individually shared.
-            let evals: Evaluation[] = [];
-
             const evalSnap = await getDocs(query(
                 collection(db, "evaluations"),
                 where("periodId", "==", selectedPeriodId)
             ));
 
-            evals = evalSnap.docs
+            const evals = evalSnap.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as Evaluation))
                 .filter(ev => {
                     const isForMe = ev.evaluateeId === user?.uid || (ev.evaluateeName === user?.displayName && !ev.evaluateeId);
@@ -156,9 +182,7 @@ export default function MyResultsPage() {
                     return timeB - timeA;
                 });
 
-            // 3. Group by type
             const groups: Record<string, GroupedResult> = {};
-            // Track how many people answered each SCALE question to get accurate average (excluding N/A)
             const responseCounts: Record<string, Record<string, number>> = {};
 
             evals.forEach(ev => {
@@ -180,22 +204,17 @@ export default function MyResultsPage() {
                 Object.entries(ev.responses).forEach(([qId, val]) => {
                     const question = qs.find(q => q.id === qId);
 
-                    // Handle regular scale questions
                     if (question && question.type === "scale") {
                         if (val !== "N/A" && typeof val === "number") {
                             g.averages[qId] = (g.averages[qId] || 0) + val;
                             responseCounts[type][qId] = (responseCounts[type][qId] || 0) + 1;
                         }
-                    }
-                    // Handle paragraph questions
-                    else if (question && question.type === "paragraph") {
+                    } else if (question && question.type === "paragraph") {
                         if (val && typeof val === "string") {
                             if (!g.comments[qId]) g.comments[qId] = [];
                             g.comments[qId].push(val);
                         }
-                    }
-                    // Handle scale comments (key ending in _comment)
-                    else if (qId.endsWith("_comment")) {
+                    } else if (qId.endsWith("_comment")) {
                         const originalQId = qId.replace("_comment", "");
                         const originalQ = qs.find(q => q.id === originalQId);
                         if (originalQ && val && typeof val === "string") {
@@ -206,7 +225,6 @@ export default function MyResultsPage() {
                 });
             });
 
-            // Calculate final averages using the actual number of respondents per question
             Object.values(groups).forEach(g => {
                 Object.keys(g.averages).forEach(qId => {
                     const count = responseCounts[g.type][qId] || 0;
@@ -232,121 +250,120 @@ export default function MyResultsPage() {
     };
 
     if (loading) {
-        return (
-            <div className="flex h-96 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
-            </div>
-        );
+        return <Loading className="py-20" />;
     }
 
     if (Object.keys(groupedResults).length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-zinc-100 text-zinc-400 dark:bg-zinc-800">
-                    <BarChart3 className="h-10 w-10" />
-                </div>
-                <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">No Shared Results Yet</h1>
-                <p className="mt-2 max-w-sm text-zinc-500">
-                    Once administrators share your evaluation feedback, it will appear here for you to review anonymously.
-                </p>
+            <div className="space-y-8">
+                <PageHeader
+                    title="My Performance Feedback"
+                    description="Aggregated and anonymized insights from your team and managers."
+                />
+                <EmptyState
+                    icon={BarChart3}
+                    title="No shared results yet"
+                    description="Once administrators share your evaluation feedback, it will appear here for you to review anonymously."
+                    className="py-32"
+                />
             </div>
         );
     }
 
     return (
-        <div className="space-y-8 pb-20">
-            <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">My Performance Feedback</h1>
-                    <p className="mt-2 text-zinc-500 dark:text-zinc-400">
-                        Aggregated and anonymized insights from your team and managers.
-                    </p>
-                </div>
+        <div className="space-y-8 pb-32">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+                <PageHeader
+                    title="My Performance Feedback"
+                    description="Aggregated and anonymized insights from your team and managers."
+                />
                 {periods.length > 1 && (
-                    <div className="relative w-full max-w-xs">
-                        <Clock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                        <select
+                    <div className="w-full max-w-[240px]">
+                        <Select
+                            icon={Clock}
                             value={selectedPeriodId}
                             onChange={(e) => setSelectedPeriodId(e.target.value)}
-                            className="w-full appearance-none rounded-2xl border-none bg-white pl-11 pr-10 py-3 text-sm shadow-sm ring-1 ring-zinc-200 focus:ring-2 focus:ring-zinc-900 dark:bg-zinc-900 dark:ring-zinc-800 dark:focus:ring-zinc-100 cursor-pointer font-medium"
                         >
                             {periods.map(p => (
                                 <option key={p.id} value={p.id}>{p.name}</option>
                             ))}
-                        </select>
-                        <ChevronDown className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                        </Select>
                     </div>
                 )}
-            </header>
+            </div>
 
             <div className="space-y-6">
                 {Object.values(groupedResults).map((group) => (
-                    <div
-                        key={group.type}
-                        className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800"
-                    >
+                    <Card key={group.type} className="overflow-hidden p-0 border-none shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-800">
                         <button
                             onClick={() => setExpandedType(expandedType === group.type ? null : group.type)}
                             className="flex w-full items-center justify-between p-6 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer"
                         >
-                            <div className="flex items-center gap-4">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-950">
+                            <div className="flex items-center gap-5">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 shadow-lg shadow-zinc-900/10">
                                     <BarChart3 className="h-6 w-6" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold capitalize text-zinc-900 dark:text-zinc-50">
+                                    <h3 className="text-lg font-bold capitalize text-zinc-900 dark:text-zinc-50 tracking-tight">
                                         {group.type.replace(/-/g, " ")} Feedback
                                     </h3>
-                                    <p className="text-xs font-medium text-zinc-500">
-                                        Based on {group.count} anonymous {group.count === 1 ? 'evaluation' : 'evaluations'}
-                                    </p>
+                                    <div className="mt-1 flex items-center gap-2">
+                                        <Badge variant="zinc">
+                                            {group.count} {group.count === 1 ? 'evaluation' : 'evaluations'}
+                                        </Badge>
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Anonymous</span>
+                                    </div>
                                 </div>
                             </div>
-                            {expandedType === group.type ? <ChevronDown className="h-5 w-5 text-zinc-400" /> : <ChevronRight className="h-5 w-5 text-zinc-400" />}
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-50 text-zinc-400 dark:bg-zinc-800">
+                                {expandedType === group.type ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                            </div>
                         </button>
 
                         <AnimatePresence>
                             {expandedType === group.type && (
                                 <motion.div
-                                    initial={{ height: 0 }}
-                                    animate={{ height: "auto" }}
-                                    exit={{ height: 0 }}
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.3, ease: "easeInOut" }}
                                     className="overflow-hidden border-t border-zinc-100 dark:border-zinc-800"
                                 >
-                                    <div className="p-8 space-y-10">
+                                    <div className="p-8 space-y-12 bg-white dark:bg-zinc-900">
                                         {/* Scale Averages */}
                                         {questions.filter(q => q.type === "scale").length > 0 && (
-                                            <div className="space-y-6">
-                                                <h4 className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zinc-400">
-                                                    <TrendingUp className="h-4 w-4" />
+                                            <div className="space-y-8">
+                                                <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+                                                    <TrendingUp className="h-3.5 w-3.5" />
                                                     Aggregated Ratings
                                                 </h4>
-                                                <div className="grid gap-6 sm:grid-cols-2">
+                                                <div className="grid gap-10 sm:grid-cols-2">
                                                     {questions.filter(q => q.type === "scale").map(q => {
                                                         const avg = group.averages[q.id];
                                                         if (avg === undefined) return null;
                                                         return (
-                                                            <div key={q.id} className="space-y-3">
-                                                                <div className="flex justify-between items-end">
-                                                                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 pr-4 leading-snug">
+                                                            <div key={q.id} className="group/item">
+                                                                <div className="flex justify-between items-end mb-3">
+                                                                    <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 pr-4 leading-relaxed">
                                                                         {q.text}
                                                                     </p>
-                                                                    <span className="text-lg font-black text-zinc-900 dark:text-zinc-50">
+                                                                    <span className="text-xl font-black text-zinc-900 dark:text-white tabular-nums">
                                                                         {avg}
                                                                     </span>
                                                                 </div>
-                                                                <div className="h-2 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                                                                <div className="relative h-2.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
                                                                     <motion.div
                                                                         initial={{ width: 0 }}
                                                                         animate={{ width: `${avg * 10}%` }}
-                                                                        className="h-full bg-zinc-900 dark:bg-white"
+                                                                        className="h-full bg-zinc-900 dark:bg-white rounded-full"
                                                                     />
                                                                 </div>
+
                                                                 {/* Scale Comments */}
                                                                 {group.comments[`${q.id}_comment`] && group.comments[`${q.id}_comment`].length > 0 && (
-                                                                    <div className="mt-2 space-y-1.5 pl-3 border-l-2 border-zinc-100 dark:border-zinc-800">
+                                                                    <div className="mt-4 space-y-2 pl-4 border-l-2 border-zinc-100 dark:border-zinc-800">
                                                                         {group.comments[`${q.id}_comment`].map((c, idx) => (
-                                                                            <p key={idx} className="text-[11px] italic text-zinc-500 leading-relaxed font-medium">
+                                                                            <p key={idx} className="text-xs italic text-zinc-500 leading-relaxed font-medium transition-colors hover:text-zinc-700 dark:hover:text-zinc-300">
                                                                                 "{c}"
                                                                             </p>
                                                                         ))}
@@ -361,24 +378,24 @@ export default function MyResultsPage() {
 
                                         {/* Paragraph Comments */}
                                         {questions.filter(q => q.type === "paragraph").length > 0 && (
-                                            <div className="space-y-6">
-                                                <h4 className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zinc-400">
-                                                    <MessageSquare className="h-4 w-4" />
-                                                    Constructive Feedback
+                                            <div className="space-y-8">
+                                                <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+                                                    <MessageSquare className="h-3.5 w-3.5" />
+                                                    Detailed Inisghts
                                                 </h4>
-                                                <div className="space-y-8">
+                                                <div className="space-y-10">
                                                     {questions.filter(q => q.type === "paragraph").map(q => {
                                                         const comments = group.comments[q.id];
                                                         if (!comments || comments.length === 0) return null;
                                                         return (
                                                             <div key={q.id} className="space-y-4">
-                                                                <h5 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
+                                                                <h5 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                                                                     {q.text}
                                                                 </h5>
-                                                                <div className="space-y-3 pl-4 border-l-2 border-zinc-100 dark:border-zinc-800">
+                                                                <div className="grid gap-4 sm:grid-cols-2">
                                                                     {comments.map((comment, i) => (
-                                                                        <div key={i} className="relative rounded-2xl bg-zinc-50/50 p-4 dark:bg-zinc-800/30">
-                                                                            <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                                                                        <div key={i} className="relative rounded-2xl bg-zinc-50 p-5 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800/50 hover:border-zinc-200 dark:hover:border-zinc-700 transition-colors">
+                                                                            <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400 font-medium">
                                                                                 "{comment}"
                                                                             </p>
                                                                         </div>
@@ -391,15 +408,15 @@ export default function MyResultsPage() {
                                             </div>
                                         )}
 
-                                        <div className="rounded-2xl bg-zinc-900 p-6 text-white dark:bg-white dark:text-zinc-950">
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center dark:bg-zinc-900/10">
-                                                    <Star className="h-5 w-5 text-amber-500" />
+                                        <div className="rounded-3xl bg-zinc-900 p-8 text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-xl shadow-zinc-900/10">
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center dark:bg-zinc-900/10 shrink-0">
+                                                    <Star className="h-6 w-6 text-amber-500 fill-amber-500" />
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-bold">Confidential & Anonymous</p>
-                                                    <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                                                        These results have been aggregated to protect the privacy of your evaluators.
+                                                    <p className="text-base font-bold tracking-tight">Confidential & Anonymous Insights</p>
+                                                    <p className="mt-1 text-sm text-zinc-400 dark:text-zinc-500 leading-relaxed">
+                                                        These results have been aggregated and processed to ensure the total privacy of your team members.
                                                     </p>
                                                 </div>
                                             </div>
@@ -408,7 +425,7 @@ export default function MyResultsPage() {
                                 </motion.div>
                             )}
                         </AnimatePresence>
-                    </div>
+                    </Card>
                 ))}
             </div>
         </div>

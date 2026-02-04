@@ -18,9 +18,14 @@ import {
     CheckCircle2,
     TrendingUp,
     ArrowRight,
-    Loader2
+    UserCircle
 } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Loading } from "@/components/ui/Loading";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface Assignment {
     id: string;
@@ -48,7 +53,6 @@ export default function DashboardOverview() {
 
     const fetchDashboardData = async () => {
         try {
-            // 1. Fetch all published periods
             const periodsSnap = await getDocs(query(
                 collection(db, "periods"),
                 where("status", "==", "published")
@@ -60,7 +64,6 @@ export default function DashboardOverview() {
             let totalAssignments = 0;
             const assignments: Assignment[] = [];
 
-            // 2. Fetch assignments for each period
             for (const pid of periodIds) {
                 const aSnap = await getDocs(query(
                     collection(db, `periods/${pid}/assignments`),
@@ -89,8 +92,6 @@ export default function DashboardOverview() {
 
             if (role === "Admin") {
                 const usersCount = await getCountFromServer(collection(db, "users"));
-                // For admin, count across all periods (or just published?)
-                // Let's count published assignments for now as it's more relevant
                 for (const pid of periodIds) {
                     const countSnap = await getCountFromServer(collection(db, `periods/${pid}/assignments`));
                     totalAssignments += countSnap.data().count;
@@ -112,27 +113,15 @@ export default function DashboardOverview() {
     };
 
     if (loading) {
-        return (
-            <div className="flex h-96 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
-            </div>
-        );
+        return <Loading className="py-20" />;
     }
 
     return (
-        <div className="space-y-10">
-            <header>
-                <motion.h1
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50"
-                >
-                    Welcome back, {user?.displayName?.split(' ')[0]}
-                </motion.h1>
-                <p className="mt-2 text-zinc-500 dark:text-zinc-400">
-                    Here's what's happening with your evaluations today.
-                </p>
-            </header>
+        <div className="space-y-12">
+            <PageHeader
+                title={`Welcome back, ${user?.displayName?.split(' ')[0]}`}
+                description="Here's what's happening with your evaluations today."
+            />
 
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {stats.map((stat, i) => (
@@ -141,114 +130,100 @@ export default function DashboardOverview() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.1 }}
-                        className="group rounded-3xl bg-white p-6 shadow-sm ring-1 ring-zinc-200 transition-all hover:shadow-md dark:bg-zinc-900 dark:ring-zinc-800"
                     >
-                        <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${stat.bg} ${stat.color} dark:bg-zinc-800/50`}>
-                            <stat.icon className="h-6 w-6" />
-                        </div>
-                        <div className="flex items-end justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{stat.label}</p>
-                                <h3 className="mt-1 text-2xl font-bold text-zinc-900 dark:text-zinc-50">{stat.value}</h3>
+                        <Card className="p-6 group cursor-default">
+                            <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${stat.bg} ${stat.color} dark:bg-zinc-800/50`}>
+                                <stat.icon className="h-6 w-6" />
                             </div>
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-50 text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100 dark:bg-zinc-800 dark:text-zinc-500">
-                                <TrendingUp className="h-4 w-4" />
+                            <div className="flex items-end justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{stat.label}</p>
+                                    <h3 className="mt-1 text-2xl font-bold text-zinc-900 dark:text-zinc-50">{stat.value}</h3>
+                                </div>
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-50 text-zinc-400 opacity-100 sm:opacity-0 transition-all group-hover:opacity-100 dark:bg-zinc-800 dark:text-zinc-500">
+                                    <TrendingUp className="h-4 w-4" />
+                                </div>
                             </div>
-                        </div>
+                        </Card>
                     </motion.div>
                 ))}
             </div>
 
-            <div className="grid gap-8 lg:grid-cols-3">
-                {/* Main Action Area */}
+            <div className="grid gap-12 lg:grid-cols-3">
                 <section className="lg:col-span-2 space-y-6">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Active Assignments</h2>
-                        <Link href="/dashboard/evaluations" className="text-sm font-medium text-zinc-900 hover:underline dark:text-zinc-400">
+                        <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">Active Assignments</h2>
+                        <Link href="/dashboard/evaluations" className="text-sm font-bold text-zinc-500 hover:text-zinc-900 transition-colors dark:hover:text-zinc-200">
                             View all
                         </Link>
                     </div>
 
                     <div className="space-y-4">
                         {activeAssignments.length === 0 ? (
-                            <div className="rounded-2xl border border-dashed border-zinc-200 p-10 text-center dark:border-zinc-800">
-                                <p className="text-zinc-500">No active assignments found.</p>
-                            </div>
+                            <EmptyState
+                                className="py-20"
+                                icon={ClipboardList}
+                                title="No active assignments"
+                                description="You have no pending evaluations at the moment."
+                            />
                         ) : activeAssignments.map((item, i) => (
                             <motion.div
                                 key={item.id}
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: 0.3 + (i * 0.1) }}
-                                className="flex items-center justify-between rounded-2xl bg-white p-5 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800"
                             >
-                                <div className="flex items-center gap-4">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                                        <UserCircle className="h-6 w-6" />
+                                <Card className="p-5 flex items-center justify-between hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                                            <UserCircle className="h-6 w-6" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-zinc-900 dark:text-zinc-50">{item.evaluateeName}</h4>
+                                            <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-wider">
+                                                {item.type.replace(/-/g, " ")} Evaluation
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h4 className="font-semibold text-zinc-900 dark:text-zinc-50">{item.evaluateeName}</h4>
-                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium uppercase tracking-wider">
-                                            {item.type.replace(/-/g, " ")} Evaluation
-                                        </p>
-                                    </div>
-                                </div>
-                                <Link
-                                    href={`/dashboard/evaluations/${item.periodId}/${item.id}`}
-                                    className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 text-white transition-transform hover:scale-105 active:scale-95 dark:bg-zinc-100 dark:text-zinc-950"
-                                >
-                                    <ArrowRight className="h-5 w-5" />
-                                </Link>
+                                    <Link
+                                        href={`/dashboard/evaluations/${item.periodId}/${item.id}`}
+                                        className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 text-white transition-all hover:scale-105 active:scale-95 dark:bg-zinc-100 dark:text-zinc-950"
+                                    >
+                                        <ArrowRight className="h-5 w-5" />
+                                    </Link>
+                                </Card>
                             </motion.div>
                         ))}
                     </div>
                 </section>
 
-                {/* Sidebar Info */}
-                <section className="space-y-6">
-                    <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Resources</h2>
-                    <div className="rounded-3xl bg-zinc-900 p-6 text-white dark:bg-zinc-100 dark:text-zinc-950">
-                        <h3 className="text-lg font-semibold">Evaluation Guide</h3>
-                        <p className="mt-2 text-sm text-zinc-400 dark:text-zinc-500">
-                            Learn how to provide constructive feedback that helps our team grow.
-                        </p>
-                        <Link
-                            href="/dashboard/guide"
-                            className="mt-6 flex w-full items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-900 transition-colors hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-                        >
-                            Read Guide
-                        </Link>
+                <section className="space-y-8">
+                    <div className="space-y-6">
+                        <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">Resources</h2>
+                        <Card className="bg-zinc-900 p-8 text-white dark:bg-zinc-100 dark:text-zinc-950 border-none shadow-xl shadow-zinc-900/10">
+                            <h3 className="text-xl font-bold tracking-tight">Evaluation Guide</h3>
+                            <p className="mt-2 text-zinc-400 dark:text-zinc-500 leading-relaxed">
+                                Learn how to provide constructive feedback that helps our team grow.
+                            </p>
+                            <Link href="/dashboard/guide" className="block mt-8">
+                                <Button
+                                    variant="secondary"
+                                    className="w-full font-bold bg-white text-zinc-900 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
+                                >
+                                    Read Guide
+                                </Button>
+                            </Link>
+                        </Card>
                     </div>
 
-                    <div className="rounded-3xl border border-dashed border-zinc-200 p-6 dark:border-zinc-800">
-                        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Need Help?</h3>
-                        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    <div className="rounded-3xl border border-dashed border-zinc-200 p-8 dark:border-zinc-800">
+                        <h3 className="font-bold text-zinc-900 dark:text-zinc-50">Need Help?</h3>
+                        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
                             Contact the HR department for any questions regarding the evaluation process.
                         </p>
                     </div>
                 </section>
             </div>
         </div>
-    );
-}
-
-function UserCircle(props: any) {
-    return (
-        <svg
-            {...props}
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <circle cx="12" cy="12" r="10" />
-            <circle cx="12" cy="10" r="3" />
-            <path d="M7 20.662V19c0-1.657 2.239-3 5-3s5 1.343 5 3v1.662" />
-        </svg>
     );
 }

@@ -47,13 +47,7 @@ import {
 import Link from "next/link";
 
 // Reuse components from old questions page if possible, but keep local for simplicity for now
-interface Question {
-    id: string;
-    text: string;
-    type: "scale" | "paragraph";
-    order: number;
-    scope?: "all" | "self";
-}
+import { QuestionItem, Question } from "@/components/ui/QuestionItem";
 
 interface User {
     uid: string;
@@ -649,42 +643,18 @@ export default function PeriodDetailPage() {
                             ) : (
                                 <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
                                     {questions.map((q) => (
-                                        <div key={q.id} className="group flex items-center justify-between p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                                            <div className="flex items-center gap-4">
-                                                <div className="text-zinc-300">
-                                                    <GripVertical className="h-5 w-5" />
-                                                </div>
-                                                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${q.type === "scale" ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"} dark:bg-zinc-800`}>
-                                                    {q.type === "scale" ? <Hash className="h-5 w-5" /> : <Type className="h-5 w-5" />}
-                                                </div>
-                                                <div>
-                                                    <h4 className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{q.text}</h4>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{q.type}</span>
-                                                        <span className="h-1 w-1 rounded-full bg-zinc-300" />
-                                                        <span className={`text-[10px] font-bold uppercase tracking-wider ${q.scope === 'self' ? 'text-amber-600' : 'text-zinc-400'}`}>
-                                                            {q.scope === 'self' ? 'Self Review Only' : 'Visible to All'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                                <button
-                                                    onClick={() => {
-                                                        setQText(q.text);
-                                                        setQType(q.type);
-                                                        setEditingQId(q.id);
-                                                        setIsAddingQuestion(true);
-                                                    }}
-                                                    className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 cursor-pointer"
-                                                >
-                                                    <Edit2 className="h-4 w-4" />
-                                                </button>
-                                                <button onClick={() => handleDeleteQuestion(q.id)} className="rounded-lg p-2 text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/10 cursor-pointer">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        </div>
+                                        <QuestionItem
+                                            key={q.id}
+                                            question={q}
+                                            showGrip
+                                            onEdit={(q) => {
+                                                setQText(q.text);
+                                                setQType(q.type);
+                                                setEditingQId(q.id);
+                                                setIsAddingQuestion(true);
+                                            }}
+                                            onDelete={handleDeleteQuestion}
+                                        />
                                     ))}
                                 </div>
                             )}
@@ -848,7 +818,7 @@ export default function PeriodDetailPage() {
                                                             e.stopPropagation();
                                                             handleDeleteAssignment(a.id);
                                                         }}
-                                                        className="rounded-lg p-2 text-zinc-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 cursor-pointer"
+                                                        className="rounded-lg p-2 text-zinc-400 opacity-100 sm:opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 cursor-pointer"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </button>
