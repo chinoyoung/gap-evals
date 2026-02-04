@@ -212,9 +212,12 @@ export default function DashboardOverview() {
                         <p className="mt-2 text-sm text-zinc-400 dark:text-zinc-500">
                             Learn how to provide constructive feedback that helps our team grow.
                         </p>
-                        <button className="mt-6 flex w-full items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-900 transition-colors hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800">
+                        <Link
+                            href="/dashboard/guide"
+                            className="mt-6 flex w-full items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-900 transition-colors hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                        >
                             Read Guide
-                        </button>
+                        </Link>
                     </div>
 
                     <div className="rounded-3xl border border-dashed border-zinc-200 p-6 dark:border-zinc-800">
