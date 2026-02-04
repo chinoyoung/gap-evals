@@ -29,6 +29,7 @@ import {
     Send,
     AlertCircle,
     CheckCircle2,
+    Check,
     Calendar,
     Plus,
     Trash2,
@@ -49,6 +50,7 @@ interface Question {
     text: string;
     type: "scale" | "paragraph";
     order: number;
+    scope?: "all" | "self";
 }
 
 interface User {
@@ -89,6 +91,7 @@ export default function PeriodDetailPage() {
     const [isAddingQuestion, setIsAddingQuestion] = useState(false);
     const [qText, setQText] = useState("");
     const [qType, setQType] = useState<"scale" | "paragraph">("scale");
+    const [qScope, setQScope] = useState<"all" | "self">("all");
     const [editingQId, setEditingQId] = useState<string | null>(null);
 
     // Global Library Import State
@@ -190,12 +193,14 @@ export default function PeriodDetailPage() {
             if (editingQId) {
                 await updateDoc(doc(db, `periods/${id}/questions`, editingQId), {
                     text: qText,
-                    type: qType
+                    type: qType,
+                    scope: qScope
                 });
             } else {
                 await addDoc(collection(db, `periods/${id}/questions`), {
                     text: qText,
                     type: qType,
+                    scope: qScope,
                     order: questions.length,
                     createdAt: Timestamp.now()
                 });
@@ -282,6 +287,7 @@ export default function PeriodDetailPage() {
                 batch.set(newRef, {
                     text: q.text,
                     type: q.type,
+                    scope: q.scope || "all",
                     order: questions.length + index,
                     createdAt: Timestamp.now()
                 });
@@ -496,28 +502,43 @@ export default function PeriodDetailPage() {
                                         />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <button
-                                            type="button"
-                                            onClick={() => setQType("scale")}
-                                            className={`flex items-center justify-center gap-3 rounded-xl border p-4 transition-all cursor-pointer ${qType === "scale"
-                                                ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950"
-                                                : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400"
-                                                }`}
-                                        >
-                                            <Hash className="h-4 w-4" />
-                                            <span className="text-sm font-medium">1-10 Scale</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setQType("paragraph")}
-                                            className={`flex items-center justify-center gap-3 rounded-xl border p-4 transition-all cursor-pointer ${qType === "paragraph"
-                                                ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950"
-                                                : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400"
-                                                }`}
-                                        >
-                                            <Type className="h-4 w-4" />
-                                            <span className="text-sm font-medium">Paragraph</span>
-                                        </button>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">Field Type</label>
+                                            <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setQType("scale")}
+                                                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${qType === "scale" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white" : "text-zinc-500"}`}
+                                                >
+                                                    <Hash className="h-3.5 w-3.5" /> Scale
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setQType("paragraph")}
+                                                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${qType === "paragraph" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white" : "text-zinc-500"}`}
+                                                >
+                                                    <Type className="h-3.5 w-3.5" /> Text
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="col-span-2 pt-2">
+                                            <label className="flex items-center gap-3 cursor-pointer group">
+                                                <div
+                                                    onClick={() => setQScope(qScope === "self" ? "all" : "self")}
+                                                    className={`h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-all ${qScope === "self"
+                                                        ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:border-zinc-100 dark:text-zinc-950"
+                                                        : "border-zinc-200 group-hover:border-zinc-400 dark:border-zinc-700 dark:group-hover:border-zinc-500"
+                                                        }`}
+                                                >
+                                                    {qScope === "self" && <Check className="h-4 w-4" strokeWidth={3} />}
+                                                </div>
+                                                <div onClick={() => setQScope(qScope === "self" ? "all" : "self")}>
+                                                    <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Self-Evaluation Only</p>
+                                                    <p className="text-xs text-zinc-500">This question will only be shown to the person evaluating themselves.</p>
+                                                </div>
+                                            </label>
+                                        </div>
                                     </div>
                                     <div className="flex justify-end gap-3">
                                         <button type="button" onClick={() => setIsAddingQuestion(false)} className="px-4 py-2 text-sm text-zinc-500 cursor-pointer">Cancel</button>
@@ -547,7 +568,13 @@ export default function PeriodDetailPage() {
                                                 </div>
                                                 <div>
                                                     <h4 className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{q.text}</h4>
-                                                    <p className="text-xs uppercase tracking-wider text-zinc-500">{q.type}</p>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{q.type}</span>
+                                                        <span className="h-1 w-1 rounded-full bg-zinc-300" />
+                                                        <span className={`text-[10px] font-bold uppercase tracking-wider ${q.scope === 'self' ? 'text-amber-600' : 'text-zinc-400'}`}>
+                                                            {q.scope === 'self' ? 'Self Review Only' : 'Visible to All'}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">

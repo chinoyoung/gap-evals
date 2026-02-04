@@ -22,7 +22,10 @@ import {
     Send,
     Star,
     CheckCircle2,
-    AlertCircle
+    AlertCircle,
+    MessageSquare,
+    ChevronDown,
+    ChevronUp
 } from "lucide-react";
 import Link from "next/link";
 
@@ -31,6 +34,7 @@ interface Question {
     text: string;
     type: "scale" | "paragraph";
     order?: number;
+    scope?: "all" | "self";
 }
 
 interface Assignment {
@@ -70,6 +74,7 @@ export default function EvaluationForm() {
                 getDocs(query(collection(db, `periods/${periodId}/questions`), orderBy("order", "asc")))
             ]);
 
+            let assignmentType = "Peer";
             if (assignSnap.exists()) {
                 const data = assignSnap.data();
                 if (data.status === 'completed') {
@@ -77,9 +82,17 @@ export default function EvaluationForm() {
                     return;
                 }
                 setAssignment({ id: assignSnap.id, ...data } as Assignment);
+                assignmentType = data.type;
             }
 
-            const qs = questSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Question));
+            let qs = questSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Question));
+
+            // Filter questions based on assignment type
+            if (assignmentType !== "Self") {
+                qs = qs.filter(q => q.scope === "all");
+            }
+            // If it IS Self, they see both 'all' and 'self' (default)
+
             setQuestions(qs);
         } catch (error) {
             console.error("Error fetching data", error);
@@ -214,61 +227,108 @@ export default function EvaluationForm() {
             </section>
 
             <form onSubmit={handleSubmit} className="space-y-10">
-                {questions.map((q, i) => (
-                    <motion.div
-                        key={q.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                        className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800"
-                    >
-                        <div className="mb-6 flex items-start gap-4">
-                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-bold text-zinc-500 dark:bg-zinc-800 tracking-tighter">
-                                {String(i + 1).padStart(2, '0')}
-                            </span>
-                            <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50 leading-tight pt-1">
-                                {q.text}
-                            </h3>
-                        </div>
+                {questions.map((q, i) => {
+                    const hasComment = responses[`${q.id}_comment`] !== undefined;
 
-                        {q.type === "scale" ? (
-                            <div className="flex flex-wrap gap-2 justify-center">
-                                <button
-                                    type="button"
-                                    onClick={() => handleScaleChange(q.id, "N/A")}
-                                    className={`flex h-12 w-20 items-center justify-center rounded-xl text-xs font-bold transition-all cursor-pointer ${responses[q.id] === "N/A"
-                                        ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
-                                        : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-                                        }`}
-                                >
-                                    N/A
-                                </button>
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((val) => (
-                                    <button
-                                        key={val}
-                                        type="button"
-                                        onClick={() => handleScaleChange(q.id, val)}
-                                        className={`flex h-12 w-12 items-center justify-center rounded-xl text-sm font-bold transition-all cursor-pointer ${responses[q.id] === val
-                                            ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
-                                            : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-                                            }`}
-                                    >
-                                        {val}
-                                    </button>
-                                ))}
+                    return (
+                        <motion.div
+                            key={q.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.1 }}
+                            className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800"
+                        >
+                            <div className="mb-6 flex items-start gap-4">
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-bold text-zinc-500 dark:bg-zinc-800 tracking-tighter">
+                                    {String(i + 1).padStart(2, '0')}
+                                </span>
+                                <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50 leading-tight pt-1">
+                                    {q.text}
+                                </h3>
                             </div>
-                        ) : (
-                            <textarea
-                                required
-                                rows={4}
-                                value={responses[q.id] || ""}
-                                onChange={(e) => handleParagraphChange(q.id, e.target.value)}
-                                placeholder="Share your thoughts here..."
-                                className="w-full rounded-2xl border-zinc-200 bg-zinc-50 p-4 text-sm transition-all focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:focus:border-zinc-100 dark:focus:ring-zinc-100"
-                            />
-                        )}
-                    </motion.div>
-                ))}
+
+                            {q.type === "scale" ? (
+                                <div className="space-y-6">
+                                    <div className="flex flex-wrap gap-2 justify-center">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleScaleChange(q.id, "N/A")}
+                                            className={`flex h-12 w-20 items-center justify-center rounded-xl text-xs font-bold transition-all cursor-pointer ${responses[q.id] === "N/A"
+                                                ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
+                                                : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                                                }`}
+                                        >
+                                            N/A
+                                        </button>
+                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((val) => (
+                                            <button
+                                                key={val}
+                                                type="button"
+                                                onClick={() => handleScaleChange(q.id, val)}
+                                                className={`flex h-12 w-12 items-center justify-center rounded-xl text-sm font-bold transition-all cursor-pointer ${responses[q.id] === val
+                                                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
+                                                    : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                                                    }`}
+                                            >
+                                                {val}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {!hasComment ? (
+                                        <div className="flex justify-center">
+                                            <button
+                                                type="button"
+                                                onClick={() => setResponses(prev => ({ ...prev, [`${q.id}_comment`]: "" }))}
+                                                className="flex items-center gap-2 text-xs font-bold text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors uppercase tracking-widest"
+                                            >
+                                                <MessageSquare className="h-3.5 w-3.5" />
+                                                Add Comment
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            className="space-y-3"
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <label className="text-[10px] uppercase font-black tracking-widest text-zinc-400">Supporting Context</label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newResponses = { ...responses };
+                                                        delete newResponses[`${q.id}_comment`];
+                                                        setResponses(newResponses);
+                                                    }}
+                                                    className="text-[10px] uppercase font-black tracking-widest text-red-500 hover:text-red-600 transition-colors"
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                            <textarea
+                                                value={responses[`${q.id}_comment`] || ""}
+                                                onChange={(e) => setResponses(prev => ({ ...prev, [`${q.id}_comment`]: e.target.value }))}
+                                                placeholder="Provide additional context for this rating..."
+                                                rows={3}
+                                                className="w-full rounded-2xl border-zinc-100 bg-zinc-50 p-4 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:border-zinc-800 dark:bg-zinc-800/50"
+                                            />
+                                        </motion.div>
+                                    )}
+                                </div>
+                            ) : (
+                                <textarea
+                                    required
+                                    rows={4}
+                                    value={responses[q.id] || ""}
+                                    onChange={(e) => handleParagraphChange(q.id, e.target.value)}
+                                    placeholder="Share your thoughts here..."
+                                    className="w-full rounded-2xl border-zinc-200 bg-zinc-50 p-4 text-sm transition-all focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:focus:border-zinc-100 dark:focus:ring-zinc-100"
+                                />
+                            )}
+                        </motion.div>
+                    );
+                })}
 
                 <div className="flex items-center justify-between rounded-3xl bg-zinc-50 p-8 dark:bg-zinc-900/50">
                     <div className="flex items-center gap-3 text-zinc-500">

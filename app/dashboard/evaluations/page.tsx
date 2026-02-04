@@ -50,7 +50,8 @@ export default function EvaluationsPage() {
             // 1. Fetch all published periods
             const periodsSnap = await getDocs(query(
                 collection(db, "periods"),
-                where("status", "==", "published")
+                where("status", "==", "published"),
+                where("archived", "!=", true)
             ));
 
             const periodIds = periodsSnap.docs.map(d => d.id);

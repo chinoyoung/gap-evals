@@ -23,6 +23,7 @@ import {
     Type,
     Hash,
     Loader2,
+    Check,
     AlertCircle,
     GripVertical,
     Filter
@@ -53,6 +54,7 @@ interface Question {
     text: string;
     type: "scale" | "paragraph";
     order: number;
+    scope?: "all" | "self";
     createdAt: any;
 }
 
@@ -102,7 +104,13 @@ function SortableQuestionItem({
                 </div>
                 <div>
                     <h4 className="font-medium text-sm text-zinc-900 dark:text-zinc-50">{q.text}</h4>
-                    <p className="text-xs text-zinc-600 uppercase tracking-wider mt-0.5">{q.type}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{q.type}</span>
+                        <span className="h-1 w-1 rounded-full bg-zinc-300" />
+                        <span className={`text-[10px] font-bold uppercase tracking-wider ${q.scope === 'self' ? 'text-amber-600' : 'text-zinc-400'}`}>
+                            {q.scope === 'self' ? 'Self Review Only' : 'Visible to All'}
+                        </span>
+                    </div>
                 </div>
             </div>
             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
@@ -130,6 +138,7 @@ export default function QuestionsPage() {
     const [loading, setLoading] = useState(true);
     const [newText, setNewText] = useState("");
     const [newType, setNewType] = useState<"scale" | "paragraph">("scale");
+    const [newScope, setNewScope] = useState<"all" | "self">("all");
     const [editingId, setEditingId] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [typeFilter, setTypeFilter] = useState<"all" | "scale" | "paragraph">("all");
@@ -183,11 +192,13 @@ export default function QuestionsPage() {
                 await updateDoc(doc(db, "questions", editingId), {
                     text: newText,
                     type: newType,
+                    scope: newScope,
                 });
             } else {
                 await addDoc(collection(db, "questions"), {
                     text: newText,
                     type: newType,
+                    scope: newScope,
                     order: questions.length,
                     createdAt: Timestamp.now(),
                 });
@@ -228,6 +239,7 @@ export default function QuestionsPage() {
     const startEditing = (question: Question) => {
         setNewText(question.text);
         setNewType(question.type);
+        setNewScope(question.scope || "all");
         setEditingId(question.id);
         setIsAdding(true);
     };
@@ -235,6 +247,7 @@ export default function QuestionsPage() {
     const resetForm = () => {
         setNewText("");
         setNewType("scale");
+        setNewScope("all");
         setEditingId(null);
         setIsAdding(false);
     };
@@ -305,28 +318,43 @@ export default function QuestionsPage() {
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setNewType("scale")}
-                                    className={`flex items-center justify-center gap-3 rounded-xl border p-4 transition-all cursor-pointer ${newType === "scale"
-                                        ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950"
-                                        : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400"
-                                        }`}
-                                >
-                                    <Hash className="h-4 w-4" />
-                                    <span className="text-sm font-medium">1-10 Scale</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setNewType("paragraph")}
-                                    className={`flex items-center justify-center gap-3 rounded-xl border p-4 transition-all cursor-pointer ${newType === "paragraph"
-                                        ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950"
-                                        : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400"
-                                        }`}
-                                >
-                                    <Type className="h-4 w-4" />
-                                    <span className="text-sm font-medium">Paragraph</span>
-                                </button>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Field Type</label>
+                                    <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+                                        <button
+                                            type="button"
+                                            onClick={() => setNewType("scale")}
+                                            className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${newType === "scale" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white" : "text-zinc-500"}`}
+                                        >
+                                            <Hash className="h-3.5 w-3.5" /> Scale
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setNewType("paragraph")}
+                                            className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${newType === "paragraph" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white" : "text-zinc-500"}`}
+                                        >
+                                            <Type className="h-3.5 w-3.5" /> Text
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="col-span-2 pt-2">
+                                    <label className="flex items-center gap-3 cursor-pointer group">
+                                        <div
+                                            onClick={() => setNewScope(newScope === "self" ? "all" : "self")}
+                                            className={`h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-all ${newScope === "self"
+                                                ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:border-zinc-100 dark:text-zinc-950"
+                                                : "border-zinc-200 group-hover:border-zinc-400 dark:border-zinc-700 dark:group-hover:border-zinc-500"
+                                                }`}
+                                        >
+                                            {newScope === "self" && <Check className="h-4 w-4" strokeWidth={3} />}
+                                        </div>
+                                        <div onClick={() => setNewScope(newScope === "self" ? "all" : "self")}>
+                                            <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Self-Evaluation Only</p>
+                                            <p className="text-xs text-zinc-500">Enable this if the question should only be visible for self-reflections.</p>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
 
                             <div className="flex justify-end gap-3">

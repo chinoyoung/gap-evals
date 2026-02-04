@@ -25,6 +25,8 @@ import {
     FileEdit,
     CheckCircle2,
     AlertCircle,
+    Archive,
+    RotateCcw,
     Loader2
 } from "lucide-react";
 import Link from "next/link";
@@ -36,6 +38,7 @@ interface Period {
     status: 'draft' | 'published';
     startDate: string;
     endDate: string;
+    archived?: boolean;
     createdAt: any;
 }
 
@@ -97,16 +100,18 @@ export default function PeriodsPage() {
         }
     };
 
-    const handleDelete = async (id: string, e: React.MouseEvent) => {
+    const handleToggleArchive = async (id: string, currentStatus: boolean, e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if (!confirm("Are you sure? This will delete the period and all its data.")) return;
-
         try {
-            await deleteDoc(doc(db, "periods", id));
+            const { updateDoc, doc } = await import("firebase/firestore");
+            await updateDoc(doc(db, "periods", id), {
+                archived: !currentStatus,
+                updatedAt: Timestamp.now()
+            });
             fetchPeriods();
         } catch (error) {
-            console.error("Error deleting period:", error);
+            console.error("Error toggling archive status:", error);
         }
     };
 
@@ -129,18 +134,20 @@ export default function PeriodsPage() {
 
     return (
         <div className="space-y-8">
-            <header className="flex items-center justify-between">
+            <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Evaluation Periods</h1>
                     <p className="mt-2 text-zinc-500 dark:text-zinc-400">Manage review cycles, questions, and assignments.</p>
                 </div>
-                <button
-                    onClick={() => setShowNewModal(true)}
-                    className="flex cursor-pointer items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200"
-                >
-                    <Plus className="h-4 w-4" />
-                    New Period
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => setShowNewModal(true)}
+                        className="flex cursor-pointer items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200"
+                    >
+                        <Plus className="h-4 w-4" />
+                        New Period
+                    </button>
+                </div>
             </header>
 
             {loading ? (
@@ -154,50 +161,112 @@ export default function PeriodsPage() {
                     <p className="mt-1 text-zinc-500">Create your first evaluation period to get started.</p>
                 </div>
             ) : (
-                <div className="grid gap-6 sm:grid-cols-2">
-                    {periods.map((period) => (
-                        <Link
-                            key={period.id}
-                            href={`/dashboard/periods/${period.id}`}
-                            className="group relative flex flex-col overflow-hidden rounded-3xl bg-white p-6 shadow-sm ring-1 ring-zinc-200 transition-all hover:shadow-md hover:ring-zinc-300 dark:bg-zinc-900 dark:ring-zinc-800 dark:hover:ring-zinc-700 pointer-events-auto cursor-pointer"
-                        >
-                            <div className="mb-4 flex items-start justify-between">
-                                <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${period.status === 'published'
-                                        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400'
-                                        : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-                                    }`}>
-                                    {period.status === 'published' ? <CheckCircle2 className="h-3 w-3" /> : <FileEdit className="h-3 w-3" />}
-                                    {period.status}
-                                </div>
-                                <button
-                                    onClick={(e) => handleDelete(period.id, e)}
-                                    className="rounded-lg p-2 text-zinc-400 opacity-0 transition-all hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 dark:hover:bg-red-900/10 cursor-pointer"
+                <div className="space-y-12">
+                    {/* Active Periods */}
+                    <div className="space-y-6">
+                        <div className="grid gap-6 sm:grid-cols-2">
+                            {periods.filter(p => !p.archived).map((period) => (
+                                <Link
+                                    key={period.id}
+                                    href={`/dashboard/periods/${period.id}`}
+                                    className="group relative flex flex-col overflow-hidden rounded-3xl bg-white p-6 shadow-sm ring-1 ring-zinc-200 transition-all hover:shadow-md hover:ring-zinc-300 dark:bg-zinc-900 dark:ring-zinc-800 dark:hover:ring-zinc-700 pointer-events-auto cursor-pointer"
                                 >
-                                    <Trash2 className="h-4 w-4" />
-                                </button>
-                            </div>
+                                    <div className="mb-4 flex items-start justify-between">
+                                        <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${period.status === 'published'
+                                            ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400'
+                                            : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                                            }`}>
+                                            {period.status === 'published' ? <CheckCircle2 className="h-3 w-3" /> : <FileEdit className="h-3 w-3" />}
+                                            {period.status}
+                                        </div>
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                            <button
+                                                onClick={(e) => handleToggleArchive(period.id, false, e)}
+                                                className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600 dark:hover:bg-zinc-800 cursor-pointer"
+                                                title="Archive Period"
+                                            >
+                                                <Archive className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    if (confirm("Delete this period?")) {
+                                                        deleteDoc(doc(db, "periods", period.id)).then(() => fetchPeriods());
+                                                    }
+                                                }}
+                                                className="rounded-lg p-2 text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/10 cursor-pointer"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    </div>
 
-                            <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 leading-tight">
-                                {period.name}
-                            </h3>
-                            <p className="mt-2 text-sm text-zinc-500 line-clamp-2 leading-relaxed">
-                                {period.description || "No description provided."}
-                            </p>
+                                    <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 leading-tight">
+                                        {period.name}
+                                    </h3>
+                                    <p className="mt-2 text-sm text-zinc-500 line-clamp-2 leading-relaxed">
+                                        {period.description || "No description provided."}
+                                    </p>
 
-                            <div className="mt-6 flex flex-wrap gap-4 pt-6 border-t border-zinc-100 dark:border-zinc-800">
-                                <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
-                                    <Calendar className="h-3.5 w-3.5" />
-                                    <span>{period.startDate ? new Date(period.startDate).toLocaleDateString() : 'Set start date'}</span>
-                                    <span>→</span>
-                                    <span>{period.endDate ? new Date(period.endDate).toLocaleDateString() : 'Set end date'}</span>
-                                </div>
-                            </div>
+                                    <div className="mt-6 flex flex-wrap gap-4 pt-6 border-t border-zinc-100 dark:border-zinc-800">
+                                        <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
+                                            <Calendar className="h-3.5 w-3.5" />
+                                            <span>{period.startDate ? new Date(period.startDate).toLocaleDateString() : 'Set start date'}</span>
+                                            <span>→</span>
+                                            <span>{period.endDate ? new Date(period.endDate).toLocaleDateString() : 'Set end date'}</span>
+                                        </div>
+                                    </div>
 
-                            <div className="absolute bottom-6 right-6 translate-x-4 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100">
-                                <ChevronRight className="h-5 w-5 text-zinc-400" />
+                                    <div className="absolute bottom-6 right-6 translate-x-4 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100">
+                                        <ChevronRight className="h-5 w-5 text-zinc-400" />
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Archived Periods */}
+                    {periods.some(p => p.archived) && (
+                        <div className="space-y-6 pt-12 border-t border-zinc-100 dark:border-zinc-800">
+                            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Archived Cycles</h2>
+                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                {periods.filter(p => p.archived).map((period) => (
+                                    <div
+                                        key={period.id}
+                                        className="group relative flex flex-col rounded-[2rem] bg-zinc-50/50 p-6 ring-1 ring-zinc-200/50 transition-all hover:bg-zinc-50 dark:bg-zinc-900/30 dark:ring-zinc-800/50"
+                                    >
+                                        <div className="mb-4 flex items-center justify-between">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Archived</span>
+                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                <button
+                                                    onClick={(e) => handleToggleArchive(period.id, true, e)}
+                                                    className="rounded-lg p-2 text-zinc-400 hover:bg-white hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 cursor-pointer"
+                                                    title="Restore Period"
+                                                >
+                                                    <RotateCcw className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        if (confirm("Permanently delete this archived period?")) {
+                                                            deleteDoc(doc(db, "periods", period.id)).then(() => fetchPeriods());
+                                                        }
+                                                    }}
+                                                    className="rounded-lg p-2 text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/10 cursor-pointer"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <h4 className="text-base font-bold text-zinc-500 dark:text-zinc-400">{period.name}</h4>
+                                        <p className="mt-2 text-xs text-zinc-400 line-clamp-1">{period.description}</p>
+                                    </div>
+                                ))}
                             </div>
-                        </Link>
-                    ))}
+                        </div>
+                    )}
                 </div>
             )}
 

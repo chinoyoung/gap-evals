@@ -74,35 +74,44 @@ export default function MyResultsPage() {
 
     const fetchPeriods = async () => {
         try {
-            // Get all periods that have shared evaluations for this user
-            const evalSnap = await getDocs(query(
+            // 1. Get all periods that have results published
+            const publishedPeriodsSnap = await getDocs(query(
+                collection(db, "periods"),
+                where("resultsPublished", "==", true)
+            ));
+
+            // 2. Get all evaluations shared with this user (regardless of period status)
+            const sharedEvalSnap = await getDocs(query(
                 collection(db, "evaluations"),
                 where("shared", "==", true)
             ));
 
-            const myEvals = evalSnap.docs
+            const mySharedEvals = sharedEvalSnap.docs
                 .map(d => d.data())
                 .filter(ev =>
                     ev.evaluateeId === user?.uid ||
                     (ev.evaluateeName === user?.displayName && !ev.evaluateeId)
                 );
 
-            const periodIds = Array.from(new Set(myEvals.map(e => e.periodId).filter(Boolean)));
+            const sharedPeriodIds = Array.from(new Set(mySharedEvals.map(e => e.periodId).filter(Boolean)));
+            const publishedPeriodIds = publishedPeriodsSnap.docs.map(d => d.id);
 
-            if (periodIds.length === 0) {
+            const allPeriodIds = Array.from(new Set([...sharedPeriodIds, ...publishedPeriodIds]));
+
+            if (allPeriodIds.length === 0) {
                 setLoading(false);
                 return;
             }
 
             const periodsData: any[] = [];
-            for (const pid of periodIds) {
+            for (const pid of allPeriodIds) {
                 const pSnap = await getDoc(doc(db, "periods", pid as string));
                 if (pSnap.exists()) {
                     periodsData.push({ id: pSnap.id, ...pSnap.data() });
                 }
             }
 
-            setPeriods(periodsData.sort((a, b) => b.createdAt?.toMillis() - a.createdAt?.toMillis()));
+            setPeriods(periodsData.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)));
             if (periodsData.length > 0) {
                 setSelectedPeriodId(periodsData[0].id);
             }
@@ -115,6 +124,9 @@ export default function MyResultsPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
+            const periodDoc = periods.find(p => p.id === selectedPeriodId);
+            const isPublished = periodDoc?.resultsPublished;
+
             // 1. Fetch questions for the selected period
             const questSnap = await getDocs(query(
                 collection(db, `periods/${selectedPeriodId}/questions`),
@@ -123,19 +135,21 @@ export default function MyResultsPage() {
             const qs = questSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Question));
             setQuestions(qs);
 
-            // 2. Fetch shared evaluations for this period and user
+            // 2. Fetch evaluations for this period and user
+            // If period results are published, show everything. Otherwise, only individually shared.
+            let evals: Evaluation[] = [];
+
             const evalSnap = await getDocs(query(
                 collection(db, "evaluations"),
-                where("periodId", "==", selectedPeriodId),
-                where("shared", "==", true)
+                where("periodId", "==", selectedPeriodId)
             ));
 
-            const evals = evalSnap.docs
+            evals = evalSnap.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as Evaluation))
-                .filter(ev =>
-                    ev.evaluateeId === user?.uid ||
-                    (ev.evaluateeName === user?.displayName && !ev.evaluateeId)
-                )
+                .filter(ev => {
+                    const isForMe = ev.evaluateeId === user?.uid || (ev.evaluateeName === user?.displayName && !ev.evaluateeId);
+                    return isForMe && (isPublished || ev.shared);
+                })
                 .sort((a, b) => {
                     const timeA = a.submittedAt?.toMillis?.() || 0;
                     const timeB = b.submittedAt?.toMillis?.() || 0;
@@ -144,11 +158,11 @@ export default function MyResultsPage() {
 
             // 3. Group by type
             const groups: Record<string, GroupedResult> = {};
+            // Track how many people answered each SCALE question to get accurate average (excluding N/A)
+            const responseCounts: Record<string, Record<string, number>> = {};
 
             evals.forEach(ev => {
-                // Prefer the type stored on the evaluation, fallback to assignment lookup if possible
-                const type = ev.type || "Peer Feedback"; // Default fallback
-
+                const type = ev.type || "Peer Feedback";
                 if (!groups[type]) {
                     groups[type] = {
                         type,
@@ -157,6 +171,7 @@ export default function MyResultsPage() {
                         comments: {},
                         lastSubmitted: ev.submittedAt
                     };
+                    responseCounts[type] = {};
                 }
 
                 const g = groups[type];
@@ -164,14 +179,26 @@ export default function MyResultsPage() {
 
                 Object.entries(ev.responses).forEach(([qId, val]) => {
                     const question = qs.find(q => q.id === qId);
-                    if (!question) return;
 
-                    if (question.type === "scale") {
+                    // Handle regular scale questions
+                    if (question && question.type === "scale") {
                         if (val !== "N/A" && typeof val === "number") {
                             g.averages[qId] = (g.averages[qId] || 0) + val;
+                            responseCounts[type][qId] = (responseCounts[type][qId] || 0) + 1;
                         }
-                    } else {
+                    }
+                    // Handle paragraph questions
+                    else if (question && question.type === "paragraph") {
                         if (val && typeof val === "string") {
+                            if (!g.comments[qId]) g.comments[qId] = [];
+                            g.comments[qId].push(val);
+                        }
+                    }
+                    // Handle scale comments (key ending in _comment)
+                    else if (qId.endsWith("_comment")) {
+                        const originalQId = qId.replace("_comment", "");
+                        const originalQ = qs.find(q => q.id === originalQId);
+                        if (originalQ && val && typeof val === "string") {
                             if (!g.comments[qId]) g.comments[qId] = [];
                             g.comments[qId].push(val);
                         }
@@ -179,19 +206,23 @@ export default function MyResultsPage() {
                 });
             });
 
-            // Calculate final averages
+            // Calculate final averages using the actual number of respondents per question
             Object.values(groups).forEach(g => {
                 Object.keys(g.averages).forEach(qId => {
-                    // This is a simple average of scales that were not N/A
-                    // Note: This doesn't account for how many people chose N/A vs 0-10
-                    // But usually all evaluators answer or all don't.
-                    g.averages[qId] = parseFloat((g.averages[qId] / g.count).toFixed(1));
+                    const count = responseCounts[g.type][qId] || 0;
+                    if (count > 0) {
+                        g.averages[qId] = parseFloat((g.averages[qId] / count).toFixed(1));
+                    } else {
+                        delete g.averages[qId];
+                    }
                 });
             });
 
             setGroupedResults(groups);
             if (Object.keys(groups).length > 0) {
                 setExpandedType(Object.keys(groups)[0]);
+            } else {
+                setExpandedType(null);
             }
         } catch (error) {
             console.error("Error fetching my resultsData", error);
@@ -311,6 +342,16 @@ export default function MyResultsPage() {
                                                                         className="h-full bg-zinc-900 dark:bg-white"
                                                                     />
                                                                 </div>
+                                                                {/* Scale Comments */}
+                                                                {group.comments[`${q.id}_comment`] && group.comments[`${q.id}_comment`].length > 0 && (
+                                                                    <div className="mt-2 space-y-1.5 pl-3 border-l-2 border-zinc-100 dark:border-zinc-800">
+                                                                        {group.comments[`${q.id}_comment`].map((c, idx) => (
+                                                                            <p key={idx} className="text-[11px] italic text-zinc-500 leading-relaxed font-medium">
+                                                                                "{c}"
+                                                                            </p>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         );
                                                     })}
