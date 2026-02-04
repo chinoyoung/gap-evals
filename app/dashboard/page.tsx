@@ -199,7 +199,7 @@ export default function DashboardOverview() {
 
                 <section className="space-y-8">
                     <div className="space-y-6">
-                        <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">Resources</h2>
+                        <h2 className="text-xl font-bold text-zinc-800 dark:text-zinc-50 tracking-tight">Resources</h2>
                         <Card className="bg-zinc-900 p-8 text-white dark:bg-zinc-100 dark:text-zinc-950 border-none shadow-xl shadow-zinc-900/10">
                             <h3 className="text-xl font-bold tracking-tight">Evaluation Guide</h3>
                             <p className="mt-2 text-zinc-400 dark:text-zinc-500 leading-relaxed">

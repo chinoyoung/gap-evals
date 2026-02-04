@@ -35,13 +35,14 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(({
                     ref={ref}
                     id={id}
                     className={cn(
-                        "w-full appearance-none rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800",
+                        "w-full appearance-none rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100",
                         Icon && "pl-11",
                         error && "border-red-500 focus:border-red-500 dark:border-red-500",
                         className
                     )}
                     {...props}
                 >
+                    {/* Add wrapper to children to style options if they are passed as raw tags */}
                     {children}
                 </select>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
