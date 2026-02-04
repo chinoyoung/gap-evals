@@ -18,7 +18,14 @@ import {
     X,
     ExternalLink,
     User,
-    Search
+    Search,
+    Archive,
+    ArchiveRestore,
+    ChevronRight,
+    ChevronDown,
+    CheckSquare,
+    Square,
+    RotateCcw
 } from "lucide-react";
 
 interface Evaluation {
@@ -29,6 +36,7 @@ interface Evaluation {
     evaluateeName: string;
     responses: Record<string, any>;
     submittedAt: any;
+    archived?: boolean;
 }
 
 interface Question {
@@ -45,6 +53,8 @@ export default function ResultsPage() {
     const [loading, setLoading] = useState(true);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [showArchived, setShowArchived] = useState(false);
+    const [selection, setSelection] = useState<Set<string>>(new Set());
 
     const filteredEvaluations = evaluations.filter(ev =>
         ev.evaluateeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -71,6 +81,46 @@ export default function ResultsPage() {
             console.error("Error fetching results", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleArchive = async (id: string, currentStatus: boolean, e: React.MouseEvent) => {
+        e.stopPropagation();
+        try {
+            const { updateDoc, doc } = await import("firebase/firestore");
+            await updateDoc(doc(db, "evaluations", id), {
+                archived: !currentStatus
+            });
+            fetchData();
+        } catch (error) {
+            console.error("Error archiving evaluation", error);
+        }
+    };
+
+    const toggleSelection = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newSelection = new Set(selection);
+        if (newSelection.has(id)) {
+            newSelection.delete(id);
+        } else {
+            newSelection.add(id);
+        }
+        setSelection(newSelection);
+    };
+
+    const handleBatchAction = async (archive: boolean) => {
+        if (selection.size === 0) return;
+        try {
+            const { writeBatch, doc } = await import("firebase/firestore");
+            const batch = writeBatch(db);
+            selection.forEach(id => {
+                batch.update(doc(db, "evaluations", id), { archived: archive });
+            });
+            await batch.commit();
+            setSelection(new Set());
+            fetchData();
+        } catch (error) {
+            console.error("Error in batch action", error);
         }
     };
 
@@ -117,43 +167,180 @@ export default function ResultsPage() {
                 </div>
             ) : (
                 <>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {filteredEvaluations.map((ev) => (
-                            <motion.button
-                                layoutId={ev.id}
-                                key={ev.id}
-                                onClick={() => setSelectedId(ev.id)}
-                                className="group flex flex-col overflow-hidden rounded-3xl bg-white p-6 shadow-sm ring-1 ring-zinc-200 transition-all hover:shadow-md dark:bg-zinc-900 dark:ring-zinc-800 text-left"
+                    <div className="space-y-12">
+                        {selection.size > 0 && (
+                            <motion.div
+                                initial={{ y: 20, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                className="sticky top-4 z-40 flex items-center justify-between rounded-2xl bg-zinc-900 px-6 py-4 shadow-2xl dark:bg-zinc-100"
                             >
-                                <div className="flex items-center gap-4 mb-4">
-                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-950">
-                                        <User className="h-6 w-6" />
-                                    </div>
-                                    <div className="overflow-hidden">
-                                        <h4 className="font-bold text-zinc-900 dark:text-zinc-50 truncate">
-                                            {ev.evaluateeName}
-                                        </h4>
-                                        <p className="text-xs text-zinc-500 font-medium">Reviewee</p>
-                                    </div>
+                                <div className="flex items-center gap-4">
+                                    <span className="text-sm font-bold text-white dark:text-zinc-950">
+                                        {selection.size} items selected
+                                    </span>
+                                    <button
+                                        onClick={() => setSelection(new Set())}
+                                        className="text-xs font-medium text-zinc-400 hover:text-white dark:text-zinc-500 dark:hover:text-zinc-950"
+                                    >
+                                        Clear
+                                    </button>
                                 </div>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => handleBatchAction(true)}
+                                        className="flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-xs font-bold text-white hover:bg-white/20 dark:bg-zinc-900/10 dark:text-zinc-950 dark:hover:bg-zinc-900/20"
+                                    >
+                                        <Archive className="h-3.5 w-3.5" />
+                                        Batch Archive
+                                    </button>
+                                    <button
+                                        onClick={() => handleBatchAction(false)}
+                                        className="flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-xs font-bold text-white hover:bg-white/20 dark:bg-zinc-900/10 dark:text-zinc-950 dark:hover:bg-zinc-900/20"
+                                    >
+                                        <RotateCcw className="h-3.5 w-3.5" />
+                                        Batch Restore
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )}
 
-                                <div className="space-y-3 mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                                    <div className="flex items-center gap-2 text-xs text-zinc-500 font-medium">
-                                        <User className="h-3.5 w-3.5" />
-                                        <span className="truncate">By {ev.evaluatorName || "Anonymous"}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-xs text-zinc-500 font-medium">
-                                        <Clock className="h-3.5 w-3.5" />
-                                        <span>{ev.submittedAt?.toDate().toLocaleDateString()}</span>
-                                    </div>
-                                </div>
+                        {/* Active Evaluations */}
+                        <div className="space-y-6">
+                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                {filteredEvaluations.filter(ev => !ev.archived).map((ev) => (
+                                    <motion.div
+                                        layoutId={ev.id}
+                                        key={ev.id}
+                                        onClick={() => setSelectedId(ev.id)}
+                                        className="group relative flex flex-col overflow-hidden rounded-3xl bg-white p-6 shadow-sm ring-1 ring-zinc-200 transition-all hover:shadow-md dark:bg-zinc-900 dark:ring-zinc-800 text-left cursor-pointer"
+                                    >
+                                        <div className="absolute right-4 top-4 z-10">
+                                            <button
+                                                onClick={(e) => toggleSelection(ev.id, e)}
+                                                className="text-zinc-300 hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
+                                            >
+                                                {selection.has(ev.id) ? (
+                                                    <CheckSquare className="h-5 w-5 text-zinc-900 dark:text-zinc-50" />
+                                                ) : (
+                                                    <Square className="h-5 w-5" />
+                                                )}
+                                            </button>
+                                        </div>
+                                        <button
+                                            onClick={(e) => handleArchive(ev.id, false, e)}
+                                            className="absolute right-4 bottom-4 p-2 text-zinc-300 hover:text-zinc-600 transition-colors z-10"
+                                            title="Archive Results"
+                                        >
+                                            <Archive className="h-4 w-4" />
+                                        </button>
+                                        <div className="flex items-center gap-4 mb-4">
+                                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-950">
+                                                <User className="h-6 w-6" />
+                                            </div>
+                                            <div className="overflow-hidden">
+                                                <h4 className="font-bold text-zinc-900 dark:text-zinc-50 truncate">
+                                                    {ev.evaluateeName}
+                                                </h4>
+                                                <p className="text-xs text-zinc-500 font-medium">Reviewee</p>
+                                            </div>
+                                        </div>
 
-                                <div className="mt-4 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-50 transition-colors">
-                                    <span>View Detailed Results</span>
-                                    <ExternalLink className="h-3 w-3" />
+                                        <div className="space-y-3 mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                                            <div className="flex items-center gap-2 text-xs text-zinc-500 font-medium">
+                                                <User className="h-3.5 w-3.5" />
+                                                <span className="truncate">By {ev.evaluatorName || "Anonymous"}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-xs text-zinc-500 font-medium">
+                                                <Clock className="h-3.5 w-3.5" />
+                                                <span>{ev.submittedAt?.toDate().toLocaleDateString()}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-50 transition-colors">
+                                            <span>View Detailed Results</span>
+                                            <ExternalLink className="h-3 w-3" />
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                            {filteredEvaluations.filter(ev => !ev.archived).length === 0 && (
+                                <div className="py-10 text-center opacity-50">
+                                    <p className="text-sm italic">No active evaluations.</p>
                                 </div>
-                            </motion.button>
-                        ))}
+                            )}
+                        </div>
+
+                        {/* Archived Section */}
+                        {filteredEvaluations.some(ev => ev.archived) && (
+                            <div className="space-y-4 pt-8 border-t border-zinc-100 dark:border-zinc-800">
+                                <button
+                                    onClick={() => setShowArchived(!showArchived)}
+                                    className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+                                >
+                                    {showArchived ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                    Archived Records ({filteredEvaluations.filter(ev => ev.archived).length})
+                                </button>
+
+                                <AnimatePresence>
+                                    {showArchived && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="flex flex-col gap-2 px-1 pb-4 pt-4">
+                                                {filteredEvaluations.filter(ev => ev.archived).map((ev) => (
+                                                    <motion.div
+                                                        layoutId={ev.id}
+                                                        key={ev.id}
+                                                        onClick={() => setSelectedId(ev.id)}
+                                                        className="group flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm ring-1 ring-zinc-200 transition-all hover:shadow-md dark:bg-zinc-900 dark:ring-zinc-800 cursor-pointer"
+                                                    >
+                                                        <div className="flex items-center gap-4">
+                                                            <button
+                                                                onClick={(e) => toggleSelection(ev.id, e)}
+                                                                className="text-zinc-300 hover:text-zinc-600 dark:hover:text-zinc-400"
+                                                            >
+                                                                {selection.has(ev.id) ? (
+                                                                    <CheckSquare className="h-4 w-4 text-zinc-900 dark:text-zinc-50" />
+                                                                ) : (
+                                                                    <Square className="h-4 w-4" />
+                                                                )}
+                                                            </button>
+                                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                                                                <User className="h-5 w-5" />
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
+                                                                    {ev.evaluateeName}
+                                                                </h4>
+                                                                <p className="text-xs text-zinc-500">
+                                                                    By {ev.evaluatorName || "Anonymous"} • {ev.submittedAt?.toDate().toLocaleDateString()}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={(e) => handleArchive(ev.id, true, e)}
+                                                                className="rounded-lg p-2 text-zinc-300 hover:bg-zinc-50 hover:text-zinc-600 dark:hover:bg-zinc-800 transition-colors"
+                                                                title="Restore Results"
+                                                            >
+                                                                <RotateCcw className="h-4 w-4" />
+                                                            </button>
+                                                            <div className="rounded-full bg-zinc-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:bg-zinc-800">
+                                                                Archived
+                                                            </div>
+                                                        </div>
+                                                    </motion.div>
+                                                ))}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        )}
                     </div>
 
                     <AnimatePresence>
@@ -168,9 +355,9 @@ export default function ResultsPage() {
                                 />
                                 <motion.div
                                     layoutId={selectedId}
-                                    className="relative w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-[2.5rem] bg-white shadow-2xl dark:bg-zinc-900 flex flex-col"
+                                    className="relative w-full max-w-2xl max-h-[85vh] overflow-hidden rounded-[2rem] bg-white shadow-2xl dark:bg-zinc-900 flex flex-col"
                                 >
-                                    <header className="flex items-center justify-between border-b border-zinc-100 p-6 dark:border-zinc-800">
+                                    <header className="flex items-center justify-between border-b border-zinc-100 p-5 dark:border-zinc-800">
                                         <div className="flex items-center gap-4 text-left">
                                             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-950">
                                                 <User className="h-6 w-6" />
@@ -194,21 +381,21 @@ export default function ResultsPage() {
                                         </button>
                                     </header>
 
-                                    <div className="flex-1 overflow-y-auto p-6 sm:p-8">
-                                        <div className="space-y-10">
+                                    <div className="flex-1 overflow-y-auto p-5 sm:p-7">
+                                        <div className="space-y-7">
                                             {questions.map((q) => (
                                                 <div key={q.id} className="space-y-3">
-                                                    <h5 className="text-base font-bold text-zinc-900 dark:text-zinc-50 tracking-tight leading-snug">
+                                                    <h5 className="text-sm font-bold text-zinc-900 dark:text-zinc-50 tracking-tight leading-snug">
                                                         {q.text}
                                                     </h5>
-                                                    <div className="rounded-2xl bg-zinc-50/50 p-6 ring-1 ring-zinc-100 dark:bg-zinc-800/30 dark:ring-zinc-800">
+                                                    <div className="rounded-2xl bg-zinc-50/50 p-4 ring-1 ring-zinc-100 dark:bg-zinc-800/30 dark:ring-zinc-800">
                                                         {q.type === 'scale' ? (
-                                                            <div className="flex items-center gap-6">
-                                                                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-zinc-900 text-xl font-black text-white dark:bg-white dark:text-zinc-950 shadow-lg shadow-zinc-900/10 dark:shadow-none">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-sm font-black text-white dark:bg-white dark:text-zinc-950 shadow-lg shadow-zinc-900/10 dark:shadow-none">
                                                                     {selectedEvaluation.responses[q.id] || "N/A"}
                                                                 </div>
                                                                 <div className="flex-1">
-                                                                    <div className="h-2 w-full rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                                                                    <div className="h-1.5 w-full rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
                                                                         <motion.div
                                                                             initial={{ width: 0 }}
                                                                             animate={{ width: `${(selectedEvaluation.responses[q.id] === "N/A" ? 0 : (selectedEvaluation.responses[q.id] || 0)) * 10}%` }}

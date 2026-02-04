@@ -10,6 +10,14 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --color-cobalt-50: #2DA5D2;
+  --color-cobalt-100: #14A3C3;
+  --color-cobalt-200: #0F83B9;
+  --color-cobalt-300: #0875A7;
+  --color-cobalt-500: #0A5E85;
+  --color-cobalt-600: #084B6A;
+  --color-cobalt-700: #023D58;
 }
 
 @media (prefers-color-scheme: dark) {
