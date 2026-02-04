@@ -67,9 +67,6 @@ export default function DashboardLayout({
             {/* Sidebar - Desktop */}
             <aside className="hidden w-72 flex-col border-r border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 lg:flex sticky top-0 h-screen">
                 <div className="mb-10 flex items-center gap-3 px-3 py-2">
-                    <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-xl shadow-zinc-900/10">
-                        <ClipboardCheck className="h-6 w-6" />
-                    </div>
                     <div>
                         <span className="text-xl font-black tracking-tight block">GAP Evaluator</span>
                         <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">@goabroad.com</span>
@@ -131,9 +128,6 @@ export default function DashboardLayout({
             {/* Mobile Header */}
             <div className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between bg-white/80 backdrop-blur-md border-b border-zinc-200 px-6 py-4 dark:bg-zinc-950/80 dark:border-zinc-800">
                 <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 flex items-center justify-center rounded-lg bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
-                        <ClipboardCheck className="h-5 w-5" />
-                    </div>
                     <span className="font-black tracking-tight">GAP Evaluator</span>
                 </div>
                 <button

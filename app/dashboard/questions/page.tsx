@@ -59,6 +59,10 @@ import { Loading } from "@/components/ui/Loading";
 import { Badge } from "@/components/ui/Badge";
 
 import { QuestionItem, Question } from "@/components/ui/QuestionItem";
+import { Modal } from "@/components/ui/Modal";
+import { useToast } from "@/components/ui/Toast";
+import { useQuestions } from "@/hooks/useQuestions";
+import { SkeletonQuestionItem } from "@/components/ui/Skeleton";
 
 function SortableQuestionItem({
     q,
@@ -101,9 +105,10 @@ function SortableQuestionItem({
 
 export default function QuestionsPage() {
     const { role } = useAuth();
-    const [questions, setQuestions] = useState<Question[]>([]);
+    const { success, error: toastError } = useToast();
+    const { questions, loading, setQuestions } = useQuestions();
+
     const [isAdding, setIsAdding] = useState(false);
-    const [loading, setLoading] = useState(true);
     const [newText, setNewText] = useState("");
     const [newType, setNewType] = useState<"scale" | "paragraph">("scale");
     const [newScope, setNewScope] = useState<"all" | "self">("all");
@@ -112,41 +117,11 @@ export default function QuestionsPage() {
     const [typeFilter, setTypeFilter] = useState<"all" | "scale" | "paragraph">("all");
 
     const sensors = useSensors(
-        useSensor(PointerSensor),
+        useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
         useSensor(KeyboardSensor, {
             coordinateGetter: sortableKeyboardCoordinates,
         })
     );
-
-    useEffect(() => {
-        fetchQuestions();
-    }, []);
-
-    const fetchQuestions = async () => {
-        try {
-            const snapshot = await getDocs(collection(db, "questions"));
-            const data = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            } as Question));
-
-            const sortedData = data.sort((a, b) => {
-                const orderA = a.order !== undefined ? a.order : 999;
-                const orderB = b.order !== undefined ? b.order : 999;
-                if (orderA !== orderB) return orderA - orderB;
-
-                const timeA = a.createdAt?.toMillis?.() || 0;
-                const timeB = b.createdAt?.toMillis?.() || 0;
-                return timeB - timeA;
-            });
-
-            setQuestions(sortedData);
-        } catch (error) {
-            console.error("Error fetching questions", error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -160,6 +135,7 @@ export default function QuestionsPage() {
                     type: newType,
                     scope: newScope,
                 });
+                success("Question updated successfully.");
             } else {
                 await addDoc(collection(db, "questions"), {
                     text: newText,
@@ -168,11 +144,12 @@ export default function QuestionsPage() {
                     order: questions.length,
                     createdAt: Timestamp.now(),
                 });
+                success("Question created successfully.");
             }
             resetForm();
-            fetchQuestions();
         } catch (error) {
             console.error("Error saving question", error);
+            toastError("Failed to save question.");
         } finally {
             setSubmitting(false);
         }
@@ -197,6 +174,7 @@ export default function QuestionsPage() {
                 await batch.commit();
             } catch (error) {
                 console.error("Error updating question order", error);
+                toastError("Failed to save new order.");
             }
         }
     };
@@ -221,9 +199,10 @@ export default function QuestionsPage() {
         if (!confirm("Are you sure you want to delete this question?")) return;
         try {
             await deleteDoc(doc(db, "questions", id));
-            fetchQuestions();
+            success("Question deleted.");
         } catch (error) {
             console.error("Error deleting question", error);
+            toastError("Failed to delete question.");
         }
     };
 
@@ -252,71 +231,70 @@ export default function QuestionsPage() {
                 </Button>
             </PageHeader>
 
-            <AnimatePresence>
-                {isAdding && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                    >
-                        <Card className="p-8">
-                            <form onSubmit={handleFormSubmit} className="space-y-6">
-                                <Input
-                                    label={editingId ? "Update Question" : "New Question"}
-                                    autoFocus
-                                    value={newText}
-                                    onChange={(e) => setNewText(e.target.value)}
-                                    placeholder="e.g. How well does this team member communicate?"
-                                />
-
-                                <div className="grid grid-cols-2 gap-8">
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium">Field Type</label>
-                                        <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
-                                            {(["scale", "paragraph"] as const).map((type) => (
-                                                <button
-                                                    key={type}
-                                                    type="button"
-                                                    onClick={() => setNewType(type)}
-                                                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${newType === type ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white" : "text-zinc-500"}`}
-                                                >
-                                                    {type === "scale" ? <Hash className="h-3.5 w-3.5" /> : <Type className="h-3.5 w-3.5" />}
-                                                    {type === "scale" ? "Scale" : "Text"}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-3 pt-6">
-                                        <div
-                                            onClick={() => setNewScope(newScope === "self" ? "all" : "self")}
-                                            className={`h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-all cursor-pointer ${newScope === "self"
-                                                ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:border-zinc-100 dark:text-zinc-950"
-                                                : "border-zinc-200 hover:border-zinc-400 dark:border-zinc-700"
-                                                }`}
-                                        >
-                                            {newScope === "self" && <Check className="h-4 w-4" strokeWidth={3} />}
-                                        </div>
-                                        <div className="cursor-pointer select-none" onClick={() => setNewScope(newScope === "self" ? "all" : "self")}>
-                                            <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50 leading-tight">Self-Evaluation Only</p>
-                                            <p className="text-[11px] text-zinc-500">Only visible for self-reflections.</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                                    <Button variant="ghost" type="button" onClick={resetForm}>
-                                        Cancel
-                                    </Button>
-                                    <Button type="submit" loading={submitting} disabled={!newText.trim()}>
-                                        {editingId ? "Update Question" : "Save Question"}
-                                    </Button>
-                                </div>
-                            </form>
-                        </Card>
-                    </motion.div>
+            <Modal
+                isOpen={isAdding}
+                onClose={resetForm}
+                title={editingId ? "Edit Question" : "New Question"}
+                description="Global questions can be imported into any evaluation period."
+                footer={(
+                    <div className="flex justify-end gap-3 w-full">
+                        <Button variant="ghost" type="button" onClick={resetForm}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleFormSubmit} loading={submitting} disabled={!newText.trim()}>
+                            {editingId ? "Update Question" : "Save Question"}
+                        </Button>
+                    </div>
                 )}
-            </AnimatePresence>
+            >
+                <form onSubmit={handleFormSubmit} className="space-y-6">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Question Text</label>
+                        <input
+                            autoFocus
+                            value={newText}
+                            onChange={(e) => setNewText(e.target.value)}
+                            placeholder="e.g. How would you rate your communication this month?"
+                            className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:focus:ring-zinc-100"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-8">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Field Type</label>
+                            <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+                                {(["scale", "paragraph"] as const).map((type) => (
+                                    <button
+                                        key={type}
+                                        type="button"
+                                        onClick={() => setNewType(type)}
+                                        className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${newType === type ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white" : "text-zinc-500"}`}
+                                    >
+                                        {type === "scale" ? <Hash className="h-3.5 w-3.5" /> : <Type className="h-3.5 w-3.5" />}
+                                        {type === "scale" ? "Scale" : "Text"}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 pt-6">
+                            <div
+                                onClick={() => setNewScope(newScope === "self" ? "all" : "self")}
+                                className={`h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-all cursor-pointer ${newScope === "self"
+                                    ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:border-zinc-100 dark:text-zinc-950"
+                                    : "border-zinc-200 hover:border-zinc-400 dark:border-zinc-700"
+                                    }`}
+                            >
+                                {newScope === "self" && <Check className="h-4 w-4" strokeWidth={3} />}
+                            </div>
+                            <div className="cursor-pointer select-none" onClick={() => setNewScope(newScope === "self" ? "all" : "self")}>
+                                <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50 leading-tight">Self-Evaluation Only</p>
+                                <p className="text-[11px] text-zinc-500">Only visible for self-reflections.</p>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </Modal>
 
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -331,7 +309,7 @@ export default function QuestionsPage() {
                                 onClick={() => setTypeFilter(filter)}
                                 className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all capitalize cursor-pointer ${typeFilter === filter
                                     ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
-                                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400"
+                                    : "text-zinc-500 hover:text-zinc-200 dark:text-zinc-400"
                                     }`}
                             >
                                 {filter}
@@ -342,7 +320,12 @@ export default function QuestionsPage() {
 
                 <Card className="overflow-hidden">
                     {loading ? (
-                        <Loading className="py-20" />
+                        <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                            <SkeletonQuestionItem />
+                            <SkeletonQuestionItem />
+                            <SkeletonQuestionItem />
+                            <SkeletonQuestionItem />
+                        </div>
                     ) : filteredQuestions.length === 0 ? (
                         <EmptyState
                             className="border-none py-20"
