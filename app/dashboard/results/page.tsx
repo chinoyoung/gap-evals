@@ -26,6 +26,7 @@ interface Evaluation {
     id: string;
     assignmentId: string;
     evaluatorId: string;
+    evaluatorName?: string;
     evaluateeName: string;
     responses: Record<string, any>;
     submittedAt: any;
@@ -110,10 +111,16 @@ export default function ResultsPage() {
                                         <h4 className="font-semibold text-zinc-900 dark:text-zinc-50">
                                             Evaluation for {ev.evaluateeName}
                                         </h4>
-                                        <p className="text-xs text-zinc-500 flex items-center gap-1.5 mt-0.5 uppercase tracking-wider font-medium">
-                                            <Clock className="h-3.5 w-3.5" />
-                                            Submitted {ev.submittedAt?.toDate().toLocaleString()}
-                                        </p>
+                                        <div className="flex items-center gap-3 mt-1">
+                                            <p className="text-xs text-zinc-500 flex items-center gap-1.5 uppercase tracking-wider font-medium border-r border-zinc-200 pr-3 dark:border-zinc-800">
+                                                <User className="h-3 w-3" />
+                                                By {ev.evaluatorName || "Anonymous"}
+                                            </p>
+                                            <p className="text-xs text-zinc-500 flex items-center gap-1.5 uppercase tracking-wider font-medium">
+                                                <Clock className="h-3.5 w-3.5" />
+                                                {ev.submittedAt?.toDate().toLocaleString()}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                                 {expandedId === ev.id ? <ChevronUp className="text-zinc-400" /> : <ChevronDown className="text-zinc-400" />}
@@ -130,8 +137,7 @@ export default function ResultsPage() {
                                         <div className="p-8 space-y-8">
                                             {questions.map((q) => (
                                                 <div key={q.id} className="space-y-2">
-                                                    <h5 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2 uppercase tracking-tighter">
-                                                        <span className="h-1.5 w-1.5 rounded-full bg-zinc-400"></span>
+                                                    <h5 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2 tracking-tighter">
                                                         {q.text}
                                                     </h5>
                                                     <div className="rounded-2xl bg-zinc-50 p-4 dark:bg-zinc-800/50">

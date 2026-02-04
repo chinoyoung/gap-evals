@@ -29,6 +29,12 @@ interface UserProfile {
     email: string;
     displayName: string;
     role: string;
+    departmentId?: string;
+}
+
+interface Department {
+    id: string;
+    name: string;
 }
 
 interface Assignment {
@@ -45,9 +51,11 @@ interface Assignment {
 export default function AssignmentsPage() {
     const { role } = useAuth();
     const [users, setUsers] = useState<UserProfile[]>([]);
+    const [departments, setDepartments] = useState<Department[]>([]);
     const [assignments, setAssignments] = useState<Assignment[]>([]);
     const [isAdding, setIsAdding] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [deptFilter, setDeptFilter] = useState("all");
 
     const [evaluator, setEvaluator] = useState("");
     const [evaluatee, setEvaluatee] = useState("");
@@ -60,12 +68,14 @@ export default function AssignmentsPage() {
 
     const fetchData = async () => {
         try {
-            const [usersSnap, assignmentsSnap] = await Promise.all([
+            const [usersSnap, deptsSnap, assignmentsSnap] = await Promise.all([
                 getDocs(collection(db, "users")),
+                getDocs(collection(db, "departments")),
                 getDocs(query(collection(db, "assignments"), orderBy("createdAt", "desc")))
             ]);
 
             setUsers(usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile)));
+            setDepartments(deptsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Department)));
             setAssignments(assignmentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Assignment)));
         } catch (error) {
             console.error("Error fetching data", error);
@@ -76,17 +86,19 @@ export default function AssignmentsPage() {
 
     const handleAddAssignment = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!evaluator || !evaluatee) return;
+
+        const actualEvaluateeId = type === "self" ? evaluator : evaluatee;
+        if (!evaluator || !actualEvaluateeId) return;
 
         setSubmitting(true);
         const evalUser = users.find(u => u.id === evaluator);
-        const targetUser = users.find(u => u.id === evaluatee);
+        const targetUser = users.find(u => u.id === actualEvaluateeId);
 
         try {
             await addDoc(collection(db, "assignments"), {
                 evaluatorId: evaluator,
                 evaluatorName: evalUser?.displayName || evalUser?.email,
-                evaluateeId: evaluatee,
+                evaluateeId: actualEvaluateeId,
                 evaluateeName: targetUser?.displayName || targetUser?.email,
                 type,
                 status: "pending",
@@ -112,6 +124,12 @@ export default function AssignmentsPage() {
             console.error("Error deleting assignment", error);
         }
     };
+
+    const filteredAssignments = assignments.filter(a => {
+        if (deptFilter === "all") return true;
+        const evaluatee = users.find(u => u.id === a.evaluateeId);
+        return evaluatee?.departmentId === deptFilter;
+    });
 
     if (role !== "Admin") {
         return (
@@ -148,33 +166,37 @@ export default function AssignmentsPage() {
                         className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800"
                     >
                         <form onSubmit={handleAddAssignment} className="space-y-6">
-                            <div className="grid gap-6 sm:grid-cols-2">
+                            <div className={`grid gap-6 ${type === "self" ? "sm:grid-cols-1" : "sm:grid-cols-2"}`}>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Evaluator</label>
+                                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                                        {type === "self" ? "Team Member" : "Evaluator"}
+                                    </label>
                                     <select
                                         value={evaluator}
                                         onChange={(e) => setEvaluator(e.target.value)}
                                         className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800"
                                     >
-                                        <option value="">Select Evaluator</option>
+                                        <option value="">Select person</option>
                                         {users.map(u => (
                                             <option key={u.id} value={u.id}>{u.displayName || u.email}</option>
                                         ))}
                                     </select>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Evaluatee</label>
-                                    <select
-                                        value={evaluatee}
-                                        onChange={(e) => setEvaluatee(e.target.value)}
-                                        className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800"
-                                    >
-                                        <option value="">Select Team Member</option>
-                                        {users.map(u => (
-                                            <option key={u.id} value={u.id}>{u.displayName || u.email}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                                {type !== "self" && (
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Evaluatee</label>
+                                        <select
+                                            value={evaluatee}
+                                            onChange={(e) => setEvaluatee(e.target.value)}
+                                            className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800"
+                                        >
+                                            <option value="">Select Team Member</option>
+                                            {users.map(u => (
+                                                <option key={u.id} value={u.id}>{u.displayName || u.email}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="space-y-2">
@@ -206,7 +228,7 @@ export default function AssignmentsPage() {
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={submitting || !evaluator || !evaluatee}
+                                    disabled={submitting || !evaluator || (type !== "self" && !evaluatee)}
                                     className="flex items-center gap-2 rounded-xl bg-zinc-900 px-6 py-2 text-sm font-medium text-white transition-all disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-950"
                                 >
                                     {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -218,68 +240,94 @@ export default function AssignmentsPage() {
                 )}
             </AnimatePresence>
 
-            <div className="rounded-3xl bg-white shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800 overflow-hidden">
-                {loading ? (
-                    <div className="flex items-center justify-center py-20">
-                        <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
-                    </div>
-                ) : assignments.length === 0 ? (
-                    <div className="py-20 text-center">
-                        <p className="text-zinc-500 italic">No assignments created yet.</p>
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="border-b border-zinc-100 bg-zinc-50/50 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:bg-zinc-800/50 dark:border-zinc-800">
-                                    <th className="px-6 py-4">Evaluator</th>
-                                    <th className="px-6 py-4 text-center"></th>
-                                    <th className="px-6 py-4">Evaluatee</th>
-                                    <th className="px-6 py-4">Type</th>
-                                    <th className="px-6 py-4 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                                {assignments.map((a) => (
-                                    <tr key={a.id} className="group hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
-                                                    <User className="h-4 w-4" />
-                                                </div>
-                                                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.evaluatorName}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <ArrowRight className="inline h-4 w-4 text-zinc-300" />
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
-                                                    <User className="h-4 w-4" />
-                                                </div>
-                                                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.evaluateeName}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="inline-flex rounded-full bg-zinc-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                                                {a.type.replace(/-/g, " ")}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button
-                                                onClick={() => handleDelete(a.id)}
-                                                className="rounded-lg p-2 text-zinc-400 opacity-0 transition-all hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 dark:hover:bg-red-900/10"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
-                                        </td>
+            <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                    <div className="text-sm font-medium text-zinc-500">Filter by Department:</div>
+                    <select
+                        value={deptFilter}
+                        onChange={(e) => setDeptFilter(e.target.value)}
+                        className="rounded-xl border-zinc-200 bg-white px-4 py-2 text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-800 dark:bg-zinc-900"
+                    >
+                        <option value="all">All Departments</option>
+                        {departments.map(d => (
+                            <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className="rounded-3xl bg-white shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800 overflow-hidden">
+                    {loading ? (
+                        <div className="flex items-center justify-center py-20">
+                            <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
+                        </div>
+                    ) : filteredAssignments.length === 0 ? (
+                        <div className="py-20 text-center">
+                            <p className="text-zinc-500 italic">No assignments found for this department.</p>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead>
+                                    <tr className="border-b border-zinc-100 bg-zinc-50/50 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:bg-zinc-800/50 dark:border-zinc-800">
+                                        <th className="px-6 py-4">Evaluator</th>
+                                        <th className="px-6 py-4 text-center"></th>
+                                        <th className="px-6 py-4">Evaluatee</th>
+                                        <th className="px-6 py-4">Department</th>
+                                        <th className="px-6 py-4">Type</th>
+                                        <th className="px-6 py-4 text-right">Actions</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                                </thead>
+                                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                                    {filteredAssignments.map((a) => {
+                                        const evaluatee = users.find(u => u.id === a.evaluateeId);
+                                        const dept = departments.find(d => d.id === evaluatee?.departmentId);
+                                        return (
+                                            <tr key={a.id} className="group hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
+                                                            <User className="h-4 w-4" />
+                                                        </div>
+                                                        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.evaluatorName}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <ArrowRight className="inline h-4 w-4 text-zinc-300" />
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
+                                                            <User className="h-4 w-4" />
+                                                        </div>
+                                                        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.evaluateeName}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                                                        {dept?.name || "Unassigned"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="inline-flex rounded-full bg-zinc-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                                                        {a.type.replace(/-/g, " ")}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <button
+                                                        onClick={() => handleDelete(a.id)}
+                                                        className="rounded-lg p-2 text-zinc-400 opacity-0 transition-all hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 dark:hover:bg-red-900/10"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

@@ -14,7 +14,8 @@ import {
     X,
     ClipboardCheck,
     UserCircle,
-    BarChart3
+    BarChart3,
+    Building2
 } from "lucide-react";
 import Link from "next/link";
 import { clsx, type ClassValue } from "clsx";
@@ -52,6 +53,7 @@ export default function DashboardLayout({
         { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
         ...(role === "Admin" ? [
             { name: "Questions", href: "/dashboard/questions", icon: FileText },
+            { name: "Departments", href: "/dashboard/departments", icon: Building2 },
             { name: "Assignments", href: "/dashboard/assignments", icon: ClipboardCheck },
             { name: "Team", href: "/dashboard/team", icon: Users },
             { name: "Results", href: "/dashboard/results", icon: BarChart3 },

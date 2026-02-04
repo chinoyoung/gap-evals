@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
 import { db } from "@/lib/firebase";
 import {
     collection,
@@ -28,41 +29,69 @@ interface UserProfile {
     displayName: string;
     role: "Admin" | "Manager" | "Employee";
     photoURL?: string;
+    departmentId?: string;
+}
+
+interface Department {
+    id: string;
+    name: string;
 }
 
 export default function TeamPage() {
+    return (
+        <Suspense fallback={<div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <TeamDirectory />
+        </Suspense>
+    );
+}
+
+function TeamDirectory() {
     const { role: currentUserRole } = useAuth();
+    const searchParams = useSearchParams();
+    const initialDept = searchParams.get("dept") || "all";
+
     const [users, setUsers] = useState<UserProfile[]>([]);
+    const [departments, setDepartments] = useState<Department[]>([]);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState<string | null>(null);
+    const [deptFilter, setDeptFilter] = useState(initialDept);
 
     useEffect(() => {
-        fetchUsers();
+        fetchData();
     }, []);
 
-    const fetchUsers = async () => {
+    const fetchData = async () => {
         try {
-            const q = query(collection(db, "users"), orderBy("email", "asc"));
-            const snapshot = await getDocs(q);
-            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile)));
+            const [usersSnap, deptsSnap] = await Promise.all([
+                getDocs(query(collection(db, "users"), orderBy("email", "asc"))),
+                getDocs(query(collection(db, "departments"), orderBy("name", "asc")))
+            ]);
+
+            setUsers(usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile)));
+            setDepartments(deptsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Department)));
         } catch (error) {
-            console.error("Error fetching users", error);
+            console.error("Error fetching data", error);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleRoleChange = async (userId: string, newRole: string) => {
+    const handleUpdate = async (userId: string, data: Partial<UserProfile>) => {
         setUpdating(userId);
         try {
-            await updateDoc(doc(db, "users", userId), { role: newRole });
-            fetchUsers();
+            await updateDoc(doc(db, "users", userId), data);
+            fetchData();
         } catch (error) {
-            console.error("Error updating role", error);
+            console.error("Error updating user", error);
         } finally {
             setUpdating(null);
         }
     };
+
+    const filteredUsers = users.filter(u => {
+        if (deptFilter === "all") return true;
+        return u.departmentId === deptFilter;
+    });
 
     if (currentUserRole !== "Admin") {
         return (
@@ -76,9 +105,24 @@ export default function TeamPage() {
 
     return (
         <div className="space-y-8">
-            <header>
-                <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Team Directory</h1>
-                <p className="mt-2 text-zinc-500 dark:text-zinc-400">Manage user permissions and roles for @goabroad.com</p>
+            <header className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Team Directory</h1>
+                    <p className="mt-2 text-zinc-500 dark:text-zinc-400">Manage user permissions and roles for @goabroad.com</p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-zinc-500">Department:</span>
+                    <select
+                        value={deptFilter}
+                        onChange={(e) => setDeptFilter(e.target.value)}
+                        className="rounded-xl border-zinc-200 bg-white px-4 py-2 text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-800 dark:bg-zinc-900"
+                    >
+                        <option value="all">All Departments</option>
+                        {departments.map(d => (
+                            <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                    </select>
+                </div>
             </header>
 
             <div className="rounded-3xl bg-white shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800 overflow-hidden">
@@ -92,13 +136,14 @@ export default function TeamPage() {
                             <thead>
                                 <tr className="border-b border-zinc-100 bg-zinc-50/50 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:bg-zinc-800/50 dark:border-zinc-800">
                                     <th className="px-6 py-4">User</th>
+                                    <th className="px-6 py-4">Department</th>
                                     <th className="px-6 py-4">Role</th>
                                     <th className="px-6 py-4">Access Level</th>
                                     <th className="px-6 py-4 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                                {users.map((user) => (
+                                {filteredUsers.map((user) => (
                                     <tr key={user.id} className="group hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
@@ -116,8 +161,21 @@ export default function TeamPage() {
                                         <td className="px-6 py-4">
                                             <select
                                                 disabled={updating === user.id}
+                                                value={user.departmentId || ""}
+                                                onChange={(e) => handleUpdate(user.id, { departmentId: e.target.value })}
+                                                className="rounded-lg border-transparent bg-transparent py-1 text-sm font-medium focus:border-zinc-200 focus:ring-0 dark:text-zinc-300"
+                                            >
+                                                <option value="">No Department</option>
+                                                {departments.map(d => (
+                                                    <option key={d.id} value={d.id}>{d.name}</option>
+                                                ))}
+                                            </select>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <select
+                                                disabled={updating === user.id}
                                                 value={user.role}
-                                                onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                                                onChange={(e) => handleUpdate(user.id, { role: e.target.value as any })}
                                                 className="rounded-lg border-transparent bg-transparent py-1 text-sm font-medium focus:border-zinc-200 focus:ring-0 dark:text-zinc-300"
                                             >
                                                 <option value="Admin">Admin</option>

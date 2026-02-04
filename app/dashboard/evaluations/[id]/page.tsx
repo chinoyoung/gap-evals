@@ -35,6 +35,9 @@ interface Question {
 
 interface Assignment {
     id: string;
+    evaluatorId: string;
+    evaluatorName: string;
+    evaluateeId: string;
     evaluateeName: string;
     status: string;
 }
@@ -98,6 +101,7 @@ export default function EvaluationForm() {
             await addDoc(collection(db, "evaluations"), {
                 assignmentId: id,
                 evaluatorId: user?.uid,
+                evaluatorName: assignment?.evaluatorName,
                 evaluateeName: assignment?.evaluateeName,
                 responses,
                 submittedAt: Timestamp.now(),
