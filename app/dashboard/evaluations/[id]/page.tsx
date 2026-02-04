@@ -82,7 +82,7 @@ export default function EvaluationForm() {
         }
     };
 
-    const handleScaleChange = (questionId: string, value: number) => {
+    const handleScaleChange = (questionId: string, value: number | string) => {
         setResponses(prev => ({ ...prev, [questionId]: value }));
     };
 
@@ -157,6 +157,38 @@ export default function EvaluationForm() {
                 <p className="mt-2 text-zinc-500 dark:text-zinc-400">Please provide honest and constructive feedback.</p>
             </header>
 
+            <section className="rounded-3xl bg-zinc-50 p-8 ring-1 ring-zinc-200 dark:bg-zinc-900/50 dark:ring-zinc-800">
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-6 flex items-center gap-2">
+                    <Star className="h-5 w-5 text-amber-500" />
+                    Rating Definitions
+                </h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+                    {[
+                        { val: "10", label: "Exceptional", desc: "Performance is consistently superior and significantly exceeds position requirements." },
+                        { val: "9", label: "Outstanding", desc: "Performance is outstanding and frequently exceeds position requirements." },
+                        { val: "8", label: "Excellent", desc: "Performance is excellent and exceeds position requirements." },
+                        { val: "7", label: "Good", desc: "Performance is good and consistently meets position requirements." },
+                        { val: "6", label: "Above Average", desc: "Performance is above average and frequently meets position requirements." },
+                        { val: "5", label: "Average", desc: "Performance is average." },
+                        { val: "4", label: "Inconsistent", desc: "Performance meets some, but not all position requirements." },
+                        { val: "3", label: "Below Average", desc: "Performance is below average and fails to meet position requirements." },
+                        { val: "2", label: "Needs Improvement", desc: "Performance needs improvement and fails to meet position requirements." },
+                        { val: "1", label: "Poor", desc: "Performance is poor and consistently fails to meet position requirements." },
+                        { val: "N/A", label: "New / Not Applicable", desc: "Employee has not been in position long enough to have demonstrated essential elements." }
+                    ].map((item) => (
+                        <div key={item.val} className="flex gap-4 items-start">
+                            <span className="flex h-8 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-xs font-bold text-white dark:bg-white dark:text-zinc-950">
+                                {item.val}
+                            </span>
+                            <div>
+                                <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50 leading-none">{item.label}</p>
+                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-normal">{item.desc}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
             <form onSubmit={handleSubmit} className="space-y-10">
                 {questions.map((q, i) => (
                     <motion.div
@@ -176,7 +208,17 @@ export default function EvaluationForm() {
                         </div>
 
                         {q.type === "scale" ? (
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-2 justify-center">
+                                <button
+                                    type="button"
+                                    onClick={() => handleScaleChange(q.id, "N/A")}
+                                    className={`flex h-12 w-20 items-center justify-center rounded-xl text-xs font-bold transition-all ${responses[q.id] === "N/A"
+                                        ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
+                                        : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                                        }`}
+                                >
+                                    N/A
+                                </button>
                                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((val) => (
                                     <button
                                         key={val}
