@@ -37,7 +37,7 @@ export default function LoginPage() {
             <ShieldCheck className="h-8 w-8" />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            GAP Evaluations
+            GAP Evaluator
           </h1>
           <p className="mt-2 text-zinc-500 dark:text-zinc-400">
             Secure access for GoAbroad.com team members

@@ -25,7 +25,8 @@ import {
     AlertCircle,
     MessageSquare,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    ShieldCheck
 } from "lucide-react";
 import Link from "next/link";
 
@@ -330,20 +331,20 @@ export default function EvaluationForm() {
                     );
                 })}
 
-                <div className="flex items-center justify-between rounded-3xl bg-zinc-50 p-8 dark:bg-zinc-900/50">
+                <footer className="flex flex-col sm:flex-row items-center justify-between rounded-3xl bg-zinc-50 p-6 sm:p-8 dark:bg-zinc-900/50 gap-6">
                     <div className="flex items-center gap-3 text-zinc-500">
-                        <AlertCircle className="h-5 w-5" />
-                        <p className="text-sm font-medium">Your responses are stored securely.</p>
+                        <ShieldCheck className="h-5 w-5 text-emerald-500" />
+                        <p className="text-sm font-medium">Responses are encrypted and secure</p>
                     </div>
                     <button
                         type="submit"
                         disabled={submitting || Object.keys(responses).length < questions.length}
-                        className="flex items-center gap-2 rounded-2xl bg-zinc-900 px-8 py-4 text-sm font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-950"
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-8 py-4 text-sm font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-950 cursor-pointer shadow-lg"
                     >
                         {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                         Submit Evaluation
                     </button>
-                </div>
+                </footer>
             </form>
         </div>
     );

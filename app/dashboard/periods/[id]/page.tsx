@@ -467,16 +467,16 @@ export default function PeriodDetailPage() {
             </header>
 
             {/* Tabs */}
-            <div className="flex border-b border-zinc-200 dark:border-zinc-800">
+            <div className="flex border-b border-zinc-200 dark:border-zinc-800 overflow-x-auto scrollbar-hide">
                 {[
-                    { id: "settings", label: "Overview & Settings", icon: Settings },
+                    { id: "settings", label: "Overview", icon: Settings },
                     { id: "questions", label: `Questions (${questions.length})`, icon: FileText },
                     { id: "assignments", label: `Assignments (${assignments.length})`, icon: Users },
                 ].map((tab) => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as any)}
-                        className={`group flex items-center gap-2 border-b-2 px-6 py-4 text-sm font-semibold transition-all cursor-pointer ${activeTab === tab.id
+                        className={`group flex min-w-fit items-center gap-2 border-b-2 px-6 py-4 text-sm font-semibold transition-all cursor-pointer ${activeTab === tab.id
                             ? "border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-50"
                             : "border-transparent text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
                             }`}
@@ -780,13 +780,13 @@ export default function PeriodDetailPage() {
                             </div>
                         )}
 
-                        <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800">
+                        <div className="overflow-x-auto rounded-3xl bg-white shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800">
                             {assignments.length === 0 ? (
                                 <div className="py-20 text-center">
                                     <p className="text-zinc-500">No assignments created for this period.</p>
                                 </div>
                             ) : (
-                                <table className="w-full text-left">
+                                <table className="w-full text-left min-w-[600px]">
                                     <thead>
                                         <tr className="border-b border-zinc-100 bg-zinc-50/50 text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:border-zinc-800 dark:bg-zinc-950/20">
                                             <th className="px-6 py-4 w-10">
@@ -973,12 +973,12 @@ export default function PeriodDetailPage() {
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="relative w-full max-w-4xl overflow-hidden rounded-[2.5rem] bg-white shadow-2xl dark:bg-zinc-900 flex flex-col max-h-[90vh]"
+                            className="relative w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-zinc-900 flex flex-col max-h-[95vh] sm:rounded-[2.5rem]"
                         >
-                            <header className="flex items-center justify-between border-b border-zinc-100 p-8 dark:border-zinc-800">
+                            <header className="flex items-center justify-between border-b border-zinc-100 p-6 sm:p-8 dark:border-zinc-800">
                                 <div>
-                                    <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Bulk Assignment Wizard</h2>
-                                    <p className="text-sm text-zinc-500 mt-1">Scale your review process in seconds</p>
+                                    <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-50">Bulk Assignment Wizard</h2>
+                                    <p className="text-xs sm:text-sm text-zinc-500 mt-1">Scale your review process in seconds</p>
                                 </div>
                                 <button
                                     onClick={() => setShowBulkModal(false)}
@@ -991,17 +991,17 @@ export default function PeriodDetailPage() {
                             <div className="flex-1 overflow-y-auto">
                                 <div className="grid grid-cols-1 lg:grid-cols-2 divide-x divide-zinc-100 dark:divide-zinc-800">
                                     {/* Left: Select Reviewees */}
-                                    <div className="p-8 space-y-6">
+                                    <div className="p-6 sm:p-8 space-y-6">
                                         <div className="flex items-center justify-between">
-                                            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400">1. Select Reviewees ({bulkReviewees.size})</h3>
+                                            <h3 className="text-[10px] sm:text-sm font-bold uppercase tracking-widest text-zinc-400">1. Select Reviewees ({bulkReviewees.size})</h3>
                                             <button
                                                 onClick={() => {
                                                     const filtered = users.filter(u => bulkDept === "All" || u.department === bulkDept);
                                                     setBulkReviewees(new Set(filtered.map(u => u.uid)));
                                                 }}
-                                                className="text-[10px] font-bold uppercase text-cobalt-600 hover:underline"
+                                                className="text-[9px] sm:text-[10px] font-bold uppercase text-cobalt-600 hover:underline"
                                             >
-                                                Select All Visible
+                                                Select All
                                             </button>
                                         </div>
 
@@ -1060,15 +1060,15 @@ export default function PeriodDetailPage() {
                                     </div>
 
                                     {/* Right: Setup Relationship & Reviewers */}
-                                    <div className="p-8 space-y-8 bg-zinc-50/50 dark:bg-zinc-950/20">
+                                    <div className="p-6 sm:p-8 space-y-8 bg-zinc-50/50 dark:bg-zinc-950/20">
                                         <div className="space-y-4">
-                                            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400">2. Define Relationship</h3>
+                                            <h3 className="text-[10px] sm:text-sm font-bold uppercase tracking-widest text-zinc-400">2. Define Relationship</h3>
                                             <div className="grid grid-cols-2 gap-2">
                                                 {["Peer to Peer", "Manager to Employee", "Employee to Manager", "Self"].map(t => (
                                                     <button
                                                         key={t}
                                                         onClick={() => setBulkType(t as any)}
-                                                        className={`py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all ${bulkType === t ? "bg-zinc-900 text-white border-zinc-900 shadow-md dark:bg-zinc-100 dark:text-zinc-950" : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-400 dark:bg-zinc-900 dark:border-zinc-800"}`}
+                                                        className={`py-2 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-widest border transition-all ${bulkType === t ? "bg-zinc-900 text-white border-zinc-900 shadow-md dark:bg-zinc-100 dark:text-zinc-950" : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-400 dark:bg-zinc-900 dark:border-zinc-800"}`}
                                                     >
                                                         {t}
                                                     </button>
@@ -1079,7 +1079,7 @@ export default function PeriodDetailPage() {
                                         {bulkType !== "Self" && (
                                             <div className="space-y-4">
                                                 <div className="flex items-center justify-between">
-                                                    <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400">3. Select Reviewer(s) ({bulkReviewers.size})</h3>
+                                                    <h3 className="text-[10px] sm:text-sm font-bold uppercase tracking-widest text-zinc-400">3. Select Reviewer(s) ({bulkReviewers.size})</h3>
                                                     <button
                                                         onClick={() => setBulkReviewers(new Set())}
                                                         className="text-[10px] font-bold uppercase text-zinc-400 hover:text-zinc-600"
@@ -1117,28 +1117,28 @@ export default function PeriodDetailPage() {
                                 </div>
                             </div>
 
-                            <footer className="border-t border-zinc-100 p-8 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900">
+                            <footer className="border-t border-zinc-100 p-6 sm:p-8 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between bg-white dark:bg-zinc-900 gap-4">
                                 <div>
-                                    <p className="text-xs font-medium text-zinc-500 italic">
-                                        Total assignments to be created: <span className="text-zinc-900 dark:text-zinc-50 font-bold">
+                                    <p className="text-[10px] sm:text-xs font-medium text-zinc-500 italic">
+                                        Total assignments to be created: <span className="text-zinc-900 dark:text-zinc-50 font-bold text-sm sm:text-base">
                                             {bulkType === "Self" ? bulkReviewees.size : bulkReviewees.size * bulkReviewers.size}
                                         </span>
                                     </p>
                                 </div>
-                                <div className="flex gap-4">
+                                <div className="flex w-full sm:w-auto gap-3">
                                     <button
                                         onClick={() => setShowBulkModal(false)}
-                                        className="px-6 py-3 text-sm font-bold text-zinc-400 hover:text-zinc-900"
+                                        className="flex-1 sm:flex-none px-6 py-3 text-sm font-bold text-zinc-400 hover:text-zinc-900 transition-colors"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         onClick={handleBulkSubmit}
                                         disabled={isGenerating || bulkReviewees.size === 0 || (bulkType !== "Self" && bulkReviewers.size === 0)}
-                                        className="flex items-center gap-2 rounded-2xl bg-zinc-900 px-8 py-3 text-sm font-black text-white transition-all hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200"
+                                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-8 py-3 text-sm font-black text-white transition-all hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 shadow-lg"
                                     >
                                         {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                                        Generate Assignments
+                                        Generate
                                     </button>
                                 </div>
                             </footer>

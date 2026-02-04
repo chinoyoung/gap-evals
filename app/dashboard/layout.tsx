@@ -71,7 +71,7 @@ export default function DashboardLayout({
             {/* Sidebar - Desktop */}
             <aside className="hidden w-64 flex-col border-r border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 lg:flex">
                 <div className="mb-10 flex items-center gap-3 px-2">
-                    <span className="text-lg font-semibold tracking-tight">GAP Evaluations</span>
+                    <span className="text-lg font-semibold tracking-tight">GAP Evaluator</span>
                 </div>
 
                 <nav className="flex-1 space-y-1">
@@ -123,10 +123,7 @@ export default function DashboardLayout({
             {/* Mobile Header */}
             <div className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between bg-white border-b border-zinc-200 px-4 py-3 dark:bg-zinc-900 dark:border-zinc-800">
                 <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950">
-                        <ClipboardCheck className="h-5 w-5" />
-                    </div>
-                    <span className="font-semibold">GAP Eval</span>
+                    <span className="font-semibold">GAP Evaluator</span>
                 </div>
                 <button
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

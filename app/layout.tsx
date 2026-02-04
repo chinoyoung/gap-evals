@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GAP Evaluations",
+  title: "GAP Evaluator",
   description: "Internal evaluation tool for GoAbroad.com",
 };
 
