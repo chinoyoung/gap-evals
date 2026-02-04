@@ -40,6 +40,7 @@ interface Assignment {
     evaluateeId: string;
     evaluateeName: string;
     status: string;
+    type: string;
 }
 
 export default function EvaluationForm() {
@@ -102,7 +103,9 @@ export default function EvaluationForm() {
                 assignmentId: id,
                 evaluatorId: user?.uid,
                 evaluatorName: assignment?.evaluatorName,
+                evaluateeId: assignment?.evaluateeId,
                 evaluateeName: assignment?.evaluateeName,
+                type: assignment?.type,
                 responses,
                 submittedAt: Timestamp.now(),
             });
@@ -216,7 +219,7 @@ export default function EvaluationForm() {
                                 <button
                                     type="button"
                                     onClick={() => handleScaleChange(q.id, "N/A")}
-                                    className={`flex h-12 w-20 items-center justify-center rounded-xl text-xs font-bold transition-all ${responses[q.id] === "N/A"
+                                    className={`flex h-12 w-20 items-center justify-center rounded-xl text-xs font-bold transition-all cursor-pointer ${responses[q.id] === "N/A"
                                         ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
                                         : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
                                         }`}
@@ -228,7 +231,7 @@ export default function EvaluationForm() {
                                         key={val}
                                         type="button"
                                         onClick={() => handleScaleChange(q.id, val)}
-                                        className={`flex h-12 w-12 items-center justify-center rounded-xl text-sm font-bold transition-all ${responses[q.id] === val
+                                        className={`flex h-12 w-12 items-center justify-center rounded-xl text-sm font-bold transition-all cursor-pointer ${responses[q.id] === val
                                             ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
                                             : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
                                             }`}

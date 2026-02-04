@@ -207,7 +207,7 @@ export default function AssignmentsPage() {
                                             key={t}
                                             type="button"
                                             onClick={() => setType(t as any)}
-                                            className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-all ${type === t
+                                            className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${type === t
                                                 ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
                                                 : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400"
                                                 }`}
@@ -315,7 +315,7 @@ export default function AssignmentsPage() {
                                                 <td className="px-6 py-4 text-right">
                                                     <button
                                                         onClick={() => handleDelete(a.id)}
-                                                        className="rounded-lg p-2 text-zinc-400 opacity-0 transition-all hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 dark:hover:bg-red-900/10"
+                                                        className="rounded-lg p-2 text-zinc-400 opacity-0 transition-all hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 dark:hover:bg-red-900/10 cursor-pointer"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </button>

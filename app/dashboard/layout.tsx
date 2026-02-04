@@ -62,6 +62,7 @@ export default function DashboardLayout({
             { name: "My Team", href: "/dashboard/my-team", icon: Users },
         ] : []),
         { name: "My Evaluations", href: "/dashboard/evaluations", icon: UserCircle },
+        { name: "My Results", href: "/dashboard/results/my-results", icon: BarChart3 },
     ];
 
     return (

@@ -108,13 +108,13 @@ function SortableQuestionItem({
             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
                 <button
                     onClick={() => onEdit(q)}
-                    className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                    className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 cursor-pointer"
                 >
                     <Edit2 className="h-4 w-4" />
                 </button>
                 <button
                     onClick={() => onDelete(q.id)}
-                    className="rounded-lg p-2 text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/10"
+                    className="rounded-lg p-2 text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/10 cursor-pointer"
                 >
                     <Trash2 className="h-4 w-4" />
                 </button>
@@ -308,7 +308,7 @@ export default function QuestionsPage() {
                                 <button
                                     type="button"
                                     onClick={() => setNewType("scale")}
-                                    className={`flex items-center justify-center gap-3 rounded-xl border p-4 transition-all ${newType === "scale"
+                                    className={`flex items-center justify-center gap-3 rounded-xl border p-4 transition-all cursor-pointer ${newType === "scale"
                                         ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950"
                                         : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400"
                                         }`}
@@ -319,7 +319,7 @@ export default function QuestionsPage() {
                                 <button
                                     type="button"
                                     onClick={() => setNewType("paragraph")}
-                                    className={`flex items-center justify-center gap-3 rounded-xl border p-4 transition-all ${newType === "paragraph"
+                                    className={`flex items-center justify-center gap-3 rounded-xl border p-4 transition-all cursor-pointer ${newType === "paragraph"
                                         ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950"
                                         : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400"
                                         }`}
@@ -362,7 +362,7 @@ export default function QuestionsPage() {
                             <button
                                 key={filter}
                                 onClick={() => setTypeFilter(filter)}
-                                className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all capitalize ${typeFilter === filter
+                                className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all capitalize cursor-pointer ${typeFilter === filter
                                     ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
                                     : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
                                     }`}

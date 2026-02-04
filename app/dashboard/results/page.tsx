@@ -25,7 +25,8 @@ import {
     ChevronDown,
     CheckSquare,
     Square,
-    RotateCcw
+    RotateCcw,
+    Share2
 } from "lucide-react";
 
 interface Evaluation {
@@ -37,6 +38,8 @@ interface Evaluation {
     responses: Record<string, any>;
     submittedAt: any;
     archived?: boolean;
+    shared?: boolean;
+    evaluateeId?: string;
 }
 
 interface Question {
@@ -108,19 +111,60 @@ export default function ResultsPage() {
         setSelection(newSelection);
     };
 
-    const handleBatchAction = async (archive: boolean) => {
+    const handleBatchAction = async (archive: boolean | null, share: boolean | null = null) => {
         if (selection.size === 0) return;
         try {
-            const { writeBatch, doc } = await import("firebase/firestore");
+            const { writeBatch, doc, getDocs, collection, query, where } = await import("firebase/firestore");
+
+            // Fetch all users to map names to IDs for "repairing" missing evaluateeIds
+            const usersSnap = await getDocs(collection(db, "users"));
+            const nameToIdMap: Record<string, string> = {};
+            usersSnap.docs.forEach(d => {
+                const userData = d.data();
+                if (userData.displayName) nameToIdMap[userData.displayName] = d.id;
+            });
+
             const batch = writeBatch(db);
             selection.forEach(id => {
-                batch.update(doc(db, "evaluations", id), { archived: archive });
+                const ev = evaluations.find(e => e.id === id);
+                const updates: any = {};
+                if (archive !== null) updates.archived = archive;
+                if (share !== null) updates.shared = share;
+
+                // Repair missing evaluateeId
+                if (ev && !ev.evaluateeId && ev.evaluateeName && nameToIdMap[ev.evaluateeName]) {
+                    updates.evaluateeId = nameToIdMap[ev.evaluateeName];
+                }
+
+                batch.update(doc(db, "evaluations", id), updates);
             });
             await batch.commit();
             setSelection(new Set());
             fetchData();
         } catch (error) {
             console.error("Error in batch action", error);
+        }
+    };
+
+    const handleToggleShare = async (id: string, currentShared: boolean, e: React.MouseEvent) => {
+        e.stopPropagation();
+        try {
+            const { updateDoc, doc, getDocs, collection, query, where } = await import("firebase/firestore");
+            const ev = evaluations.find(e => e.id === id);
+            const updates: any = { shared: !currentShared };
+
+            // Repair missing evaluateeId on toggle
+            if (ev && !ev.evaluateeId && ev.evaluateeName) {
+                const usersSnap = await getDocs(query(collection(db, "users"), where("displayName", "==", ev.evaluateeName)));
+                if (!usersSnap.empty) {
+                    updates.evaluateeId = usersSnap.docs[0].id;
+                }
+            }
+
+            await updateDoc(doc(db, "evaluations", id), updates);
+            fetchData();
+        } catch (error) {
+            console.error("Error toggling share status", error);
         }
     };
 
@@ -180,21 +224,28 @@ export default function ResultsPage() {
                                     </span>
                                     <button
                                         onClick={() => setSelection(new Set())}
-                                        className="text-xs font-medium text-zinc-400 hover:text-white dark:text-zinc-500 dark:hover:text-zinc-950"
+                                        className="text-xs font-medium text-zinc-400 hover:text-white dark:text-zinc-500 dark:hover:text-zinc-950 cursor-pointer"
                                     >
                                         Clear
                                     </button>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <button
-                                        onClick={() => handleBatchAction(true)}
+                                        onClick={() => handleBatchAction(null, true)}
+                                        className="flex items-center gap-2 rounded-xl bg-cobalt-600 px-4 py-2 text-xs font-bold text-white hover:bg-cobalt-700 dark:bg-cobalt-500 dark:hover:bg-cobalt-600"
+                                    >
+                                        <Share2 className="h-3.5 w-3.5" />
+                                        Share with Reviewees
+                                    </button>
+                                    <button
+                                        onClick={() => handleBatchAction(true, null)}
                                         className="flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-xs font-bold text-white hover:bg-white/20 dark:bg-zinc-900/10 dark:text-zinc-950 dark:hover:bg-zinc-900/20"
                                     >
                                         <Archive className="h-3.5 w-3.5" />
                                         Batch Archive
                                     </button>
                                     <button
-                                        onClick={() => handleBatchAction(false)}
+                                        onClick={() => handleBatchAction(false, null)}
                                         className="flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-xs font-bold text-white hover:bg-white/20 dark:bg-zinc-900/10 dark:text-zinc-950 dark:hover:bg-zinc-900/20"
                                     >
                                         <RotateCcw className="h-3.5 w-3.5" />
@@ -228,10 +279,17 @@ export default function ResultsPage() {
                                         </div>
                                         <button
                                             onClick={(e) => handleArchive(ev.id, false, e)}
-                                            className="absolute right-4 bottom-4 p-2 text-zinc-300 hover:text-zinc-600 transition-colors z-10"
+                                            className="absolute right-4 bottom-4 p-2 text-zinc-300 hover:text-zinc-600 transition-colors z-10 cursor-pointer"
                                             title="Archive Results"
                                         >
                                             <Archive className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            onClick={(e) => handleToggleShare(ev.id, !!ev.shared, e)}
+                                            className={`absolute right-12 bottom-4 p-2 transition-colors z-10 cursor-pointer ${ev.shared ? 'text-cobalt-600' : 'text-zinc-300 hover:text-cobalt-600'}`}
+                                            title={ev.shared ? "Unshare with Reviewee" : "Share with Reviewee"}
+                                        >
+                                            <Share2 className="h-4 w-4" />
                                         </button>
                                         <div className="flex items-center gap-4 mb-4">
                                             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-950">
@@ -254,6 +312,12 @@ export default function ResultsPage() {
                                                 <Clock className="h-3.5 w-3.5" />
                                                 <span>{ev.submittedAt?.toDate().toLocaleDateString()}</span>
                                             </div>
+                                            {ev.shared && (
+                                                <div className="flex items-center gap-2 text-[10px] font-bold text-cobalt-600 uppercase tracking-tight">
+                                                    <Share2 className="h-3 w-3" />
+                                                    <span>Shared with Reviewee</span>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="mt-4 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-50 transition-colors">
@@ -275,7 +339,7 @@ export default function ResultsPage() {
                             <div className="space-y-4 pt-8 border-t border-zinc-100 dark:border-zinc-800">
                                 <button
                                     onClick={() => setShowArchived(!showArchived)}
-                                    className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+                                    className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors cursor-pointer"
                                 >
                                     {showArchived ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                                     Archived Records ({filteredEvaluations.filter(ev => ev.archived).length})
