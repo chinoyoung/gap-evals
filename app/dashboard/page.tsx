@@ -39,7 +39,7 @@ interface Assignment {
 }
 
 export default function DashboardOverview() {
-    const { user, role } = useAuth();
+    const { user, role, isAdmin } = useAuth();
     const [stats, setStats] = useState([
         { label: "Pending Evaluations", value: "0", icon: Clock, color: "text-amber-500", bg: "bg-amber-50" },
         { label: "Completed", value: "0", icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-50" },
@@ -93,7 +93,7 @@ export default function DashboardOverview() {
                 { label: "Completed", value: String(completedCount), icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-50" },
             ];
 
-            if (role === "Admin") {
+            if (isAdmin) {
                 const usersCount = await getCountFromServer(collection(db, "users"));
                 for (const pid of periodIds) {
                     const countSnap = await getCountFromServer(collection(db, `periods/${pid}/assignments`));

@@ -8,14 +8,16 @@ import {
     signOut,
     User
 } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs, query } from "firebase/firestore";
 import { auth, db } from "./firebase";
 
 interface AuthContextType {
     user: User | null;
     loading: boolean;
     error: string | null;
-    role: "Admin" | "Manager" | "Employee" | null;
+    role: string | null;
+    isAdmin: boolean;
+    canManageTeam: boolean;
     signIn: () => Promise<void>;
     logOut: () => Promise<void>;
     clearError: () => void;
@@ -26,6 +28,8 @@ const AuthContext = createContext<AuthContextType>({
     loading: true,
     error: null,
     role: null,
+    isAdmin: false,
+    canManageTeam: false,
     signIn: async () => { },
     logOut: async () => { },
     clearError: () => { },
@@ -33,21 +37,25 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
-    const [role, setRole] = useState<"Admin" | "Manager" | "Employee" | null>(null);
+    const [role, setRole] = useState<string | null>(null);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [canManageTeam, setCanManageTeam] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
-                if (!user.email?.endsWith("@goabroad.com")) {
-                    await signOut(auth);
-                    setUser(null);
-                    setRole(null);
-                    setError("Access denied");
-                    setLoading(false);
-                    return;
-                }
+                // if (!user.email?.endsWith("@goabroad.com")) {
+                //     await signOut(auth);
+                //     setUser(null);
+                //     setRole(null);
+                //     setIsAdmin(false);
+                //     setCanManageTeam(false);
+                //     setError("Access denied");
+                //     setLoading(false);
+                //     return;
+                // }
 
                 setUser(user);
                 setError(null);
@@ -57,19 +65,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 const userDoc = await getDoc(userDocRef);
 
                 if (userDoc.exists()) {
-                    const data = userDoc.data();
-                    setRole(data.role);
+                    const userData = userDoc.data();
+                    const roleName = userData.role;
+                    setRole(roleName);
+
+                    // Fetch role flags from roles collection
+                    try {
+                        const rolesSnap = await getDocs(query(collection(db, "roles")));
+                        const activeRole = rolesSnap.docs.find(d => d.data().name === roleName);
+                        if (activeRole) {
+                            const rd = activeRole.data();
+                            setIsAdmin(!!rd.isAdmin);
+                            setCanManageTeam(!!rd.canManageTeam);
+                        } else {
+                            // Fallback for legacy or unknown roles
+                            setIsAdmin(roleName === "Admin");
+                            setCanManageTeam(roleName === "Manager" || roleName === "Team Lead" || roleName === "Admin");
+                        }
+                    } catch (e) {
+                        console.error("Error fetching role flags", e);
+                    }
 
                     // Update photoURL if it doesn't exist or is different
-                    if (!data.photoURL || data.photoURL !== user.photoURL) {
+                    if (!userData.photoURL || userData.photoURL !== user.photoURL) {
                         await setDoc(userDocRef, {
                             photoURL: user.photoURL,
-                            displayName: user.displayName || data.displayName
+                            displayName: user.displayName || userData.displayName
                         }, { merge: true });
                     }
                 } else {
                     // Default role for new users
-                    const defaultRole = "Employee";
+                    const defaultRole = "Member";
                     await setDoc(userDocRef, {
                         email: user.email,
                         displayName: user.displayName,
@@ -78,10 +104,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         createdAt: new Date().toISOString(),
                     });
                     setRole(defaultRole);
+                    setIsAdmin(false);
+                    setCanManageTeam(false);
                 }
             } else {
                 setUser(null);
                 setRole(null);
+                setIsAdmin(false);
+                setCanManageTeam(false);
             }
             setLoading(false);
         });
@@ -113,7 +143,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const clearError = () => setError(null);
 
     return (
-        <AuthContext.Provider value={{ user, loading, error, role, signIn, logOut, clearError }}>
+        <AuthContext.Provider value={{ user, loading, error, role, isAdmin, canManageTeam, signIn, logOut, clearError }}>
             {children}
         </AuthContext.Provider>
     );

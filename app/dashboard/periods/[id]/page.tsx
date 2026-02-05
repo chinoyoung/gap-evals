@@ -42,7 +42,8 @@ import {
     CheckSquare,
     Square,
     ChevronDown,
-    ChevronRight
+    ChevronRight,
+    UserCircle
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/ui/Toast";
@@ -63,6 +64,21 @@ interface User {
     photoURL?: string;
     departmentId?: string;
     department?: string;
+    role: string;
+}
+
+interface Role {
+    id: string;
+    name: string;
+    isAdmin?: boolean;
+    canManageTeam?: boolean;
+}
+
+interface Relationship {
+    id: string;
+    name: string;
+    reviewerRoleId: string;
+    revieweeRoleId: string;
 }
 
 interface Assignment {
@@ -72,14 +88,14 @@ interface Assignment {
     evaluateeId: string;
     evaluateeName: string;
     status: string;
-    type: "Peer to Peer" | "Manager to Employee" | "Employee to Manager" | "Self";
+    type: string;
 }
 
 export default function PeriodDetailPage() {
     const { success, error: toastError } = useToast();
     const { id } = useParams();
     const router = useRouter();
-    const { role } = useAuth();
+    const { isAdmin } = useAuth();
     const { questions, loading: questionsLoading } = useQuestions(id as string);
 
     const [period, setPeriod] = useState<any>(null);
@@ -104,16 +120,15 @@ export default function PeriodDetailPage() {
     // Assignments State (Period Specific)
     const [assignments, setAssignments] = useState<Assignment[]>([]);
     const [users, setUsers] = useState<User[]>([]);
-    const [isAddingAssignment, setIsAddingAssignment] = useState(false);
-    const [selectedEvaluator, setSelectedEvaluator] = useState("");
-    const [selectedEvaluatee, setSelectedEvaluatee] = useState("");
-    const [assignType, setAssignType] = useState<Assignment["type"]>("Peer to Peer");
+    const [compRoles, setCompRoles] = useState<Role[]>([]);
+    const [roleRelationships, setRoleRelationships] = useState<Relationship[]>([]);
 
     // Bulk Wizard State
     const [showBulkModal, setShowBulkModal] = useState(false);
     const [bulkReviewees, setBulkReviewees] = useState<Set<string>>(new Set());
     const [bulkReviewers, setBulkReviewers] = useState<Set<string>>(new Set());
-    const [bulkType, setBulkType] = useState<Assignment["type"]>("Peer to Peer");
+    const [bulkType, setBulkType] = useState<string>("Peer to Peer");
+    const [bulkRelId, setBulkRelId] = useState<string>("peer-default");
     const [bulkSearch, setBulkSearch] = useState("");
     const [bulkDept, setBulkDept] = useState("All");
     const [isGenerating, setIsGenerating] = useState(false);
@@ -122,7 +137,6 @@ export default function PeriodDetailPage() {
     const [assignmentSelection, setAssignmentSelection] = useState<Set<string>>(new Set());
     const [expandedEvaluators, setExpandedEvaluators] = useState<Set<string>>(new Set());
 
-    // Clean up bulk wizard selections if they become invalid due to existing assignments
     useEffect(() => {
         if (!showBulkModal) return;
 
@@ -139,16 +153,41 @@ export default function PeriodDetailPage() {
                 return changed ? next : prev;
             });
             setBulkReviewees(new Set());
-        } else if (bulkReviewers.size > 0) {
+        } else if (bulkReviewers.size > 0 && bulkRelId) {
+            // Validate if selected relationship is still valid for reviewers
+            let isInvalid = false;
+
+            if (bulkRelId === "peer-default") {
+                const roles = Array.from(bulkReviewers).map(id => users.find(u => u.uid === id)?.role);
+                isInvalid = new Set(roles).size > 1;
+            } else if (bulkRelId === "self-default") {
+                isInvalid = false; // Always valid
+            } else {
+                const rel = roleRelationships.find(r => r.id === bulkRelId);
+                if (!rel) {
+                    isInvalid = true;
+                } else {
+                    const selectedUsers = Array.from(bulkReviewers).map(id => users.find(u => u.uid === id)).filter(Boolean);
+                    const reviewerRoleObj = compRoles.find(r => r.id === rel.reviewerRoleId);
+                    isInvalid = selectedUsers.some(u => u?.role !== reviewerRoleObj?.name);
+                }
+            }
+
+            if (isInvalid) {
+                setBulkRelId("peer-default");
+                setBulkType("Peer to Peer");
+                setBulkReviewees(new Set());
+            }
+
             setBulkReviewees(prev => {
                 const next = new Set(prev);
                 let changed = false;
                 prev.forEach(uid => {
-                    const isInvalid = Array.from(bulkReviewers).some(revId =>
+                    const isAlreadyAssigned = Array.from(bulkReviewers).some(revId =>
                         assignments.some(a => a.evaluatorId === revId && a.evaluateeId === uid && a.type === bulkType)
                     );
                     const isSelf = bulkReviewers.has(uid);
-                    if (isInvalid || isSelf) {
+                    if (isAlreadyAssigned || isSelf) {
                         next.delete(uid);
                         changed = true;
                     }
@@ -156,7 +195,7 @@ export default function PeriodDetailPage() {
                 return changed ? next : prev;
             });
         }
-    }, [bulkType, bulkReviewers, assignments, showBulkModal]);
+    }, [bulkType, bulkRelId, bulkReviewers, assignments, showBulkModal]);
 
     useEffect(() => {
         if (id) {
@@ -185,22 +224,23 @@ export default function PeriodDetailPage() {
 
     const fetchSubData = async () => {
         try {
-            // Fetch period-specific assignments, users, and departments in parallel
-            const [aSnap, uSnap, dSnap] = await Promise.all([
+            const [aSnap, uSnap, dSnap, rSnap, relSnap] = await Promise.all([
                 getDocs(collection(db, `periods/${id}/assignments`)),
                 getDocs(collection(db, "users")),
-                getDocs(collection(db, "departments"))
+                getDocs(collection(db, "departments")),
+                getDocs(collection(db, "roles")),
+                getDocs(collection(db, "role_relationships"))
             ]);
 
-            // Create a lookup map for department names
             const deptsMap = dSnap.docs.reduce((acc, doc) => {
                 acc[doc.id] = doc.data().name;
                 return acc;
             }, {} as Record<string, string>);
 
             setAssignments(aSnap.docs.map(d => ({ id: d.id, ...d.data() } as Assignment)));
+            setCompRoles(rSnap.docs.map(d => ({ id: d.id, ...d.data() } as Role)));
+            setRoleRelationships(relSnap.docs.map(d => ({ id: d.id, ...d.data() } as Relationship)));
 
-            // Enrich users with their department names
             setUsers(uSnap.docs.map(d => {
                 const data = d.data();
                 return {
@@ -211,7 +251,7 @@ export default function PeriodDetailPage() {
             }));
         } catch (err) {
             console.error("Error fetching sub-data:", err);
-            toastError("Failed to load assignments, users, or departments.");
+            toastError("Failed to load required data.");
         }
     };
 
@@ -227,11 +267,49 @@ export default function PeriodDetailPage() {
             });
             setPeriod({ ...period, name: settingName, description: settingDesc, startDate: settingStart, endDate: settingEnd });
             success("Settings saved successfully.");
-        } catch (err) {
-            console.error("Error saving settings:", err);
-            toastError("Failed to save settings.");
+        } catch (error) {
+            console.error("Error saving period:", error);
+            toastError("Failed to save changes.");
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleAssignAllSelf = async () => {
+        if (!confirm("Assign a self-evaluation to all users who don't have one yet?")) return;
+        setIsGenerating(true);
+        try {
+            let count = 0;
+            const promises = [];
+            for (const u of users) {
+                const hasSelf = assignments.some(a => a.evaluatorId === u.uid && a.evaluateeId === u.uid && a.type === "Self");
+                if (!hasSelf) {
+                    promises.push(addDoc(collection(db, `periods/${id}/assignments`), {
+                        periodId: id,
+                        periodName: settingName,
+                        evaluatorId: u.uid,
+                        evaluatorName: u.displayName,
+                        evaluateeId: u.uid,
+                        evaluateeName: u.displayName,
+                        type: "Self",
+                        status: "pending",
+                        createdAt: Timestamp.now()
+                    }));
+                    count++;
+                }
+            }
+            if (promises.length > 0) {
+                await Promise.all(promises);
+                success(`Created ${count} self-evaluation assignments.`);
+                fetchSubData();
+            } else {
+                success("Everyone already has a self-evaluation.");
+            }
+        } catch (err) {
+            console.error(err);
+            toastError("Failed to assign self-evaluations.");
+        } finally {
+            setIsGenerating(false);
         }
     };
 
@@ -312,37 +390,7 @@ export default function PeriodDetailPage() {
         }
     };
 
-    const handleAssignmentSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
 
-        const evaluatorId = selectedEvaluator;
-        const evaluateeId = assignType === "Self" ? selectedEvaluator : selectedEvaluatee;
-
-        if (!evaluatorId || !evaluateeId) return;
-
-        const evaluator = users.find(u => u.uid === evaluatorId);
-        const evaluatee = users.find(u => u.uid === evaluateeId);
-
-        try {
-            await addDoc(collection(db, `periods/${id}/assignments`), {
-                periodId: id,
-                periodName: period.name,
-                evaluatorId: evaluatorId,
-                evaluatorName: evaluator?.displayName || "Unknown",
-                evaluateeId: evaluateeId,
-                evaluateeName: evaluatee?.displayName || "Unknown",
-                type: assignType,
-                status: "pending",
-                createdAt: Timestamp.now()
-            });
-            setSelectedEvaluator("");
-            setSelectedEvaluatee("");
-            setIsAddingAssignment(false);
-            fetchSubData();
-        } catch (error) {
-            console.error("Error saving assignment:", error);
-        }
-    };
 
     const handleDeleteAssignment = async (aId: string) => {
         if (!confirm("Remove this assignment?")) return;
@@ -662,31 +710,20 @@ export default function PeriodDetailPage() {
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <button
-                                    onClick={() => setIsAddingAssignment(true)}
-                                    className="flex cursor-pointer items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-medium text-zinc-900 ring-1 ring-zinc-200 transition-all hover:bg-zinc-50 dark:bg-zinc-900 dark:text-zinc-100 dark:ring-zinc-800 dark:hover:bg-zinc-800"
-                                >
-                                    <UserPlus className="h-4 w-4" />
-                                    New Assignment
-                                </button>
-                                <button
                                     onClick={() => setShowBulkModal(true)}
                                     className="flex cursor-pointer items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
                                 >
                                     <Users className="h-4 w-4" />
-                                    Bulk Wizard
+                                    Assign Evaluations
                                 </button>
-                                {assignmentSelection.size > 0 && (
-                                    <button
-                                        onClick={handleBatchDeleteAssignments}
-                                        className="flex cursor-pointer items-center gap-2 rounded-xl bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition-all hover:bg-red-100 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                        Delete Selected ({assignmentSelection.size})
-                                    </button>
-                                )}
-                            </div>
-
-                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleAssignAllSelf}
+                                    disabled={isGenerating}
+                                    className="flex cursor-pointer items-center gap-2 rounded-xl bg-white border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-600 transition-all hover:bg-zinc-50 hover:text-zinc-900 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:text-zinc-100"
+                                >
+                                    <UserCircle className="h-4 w-4" />
+                                    Assign All Self
+                                </button>
                                 <button
                                     onClick={() => {
                                         const evaluators = Array.from(new Set(assignments.map(a => a.evaluatorId)));
@@ -703,71 +740,17 @@ export default function PeriodDetailPage() {
                                 >
                                     Collapse All
                                 </button>
+                                {assignmentSelection.size > 0 && (
+                                    <button
+                                        onClick={handleBatchDeleteAssignments}
+                                        className="flex cursor-pointer items-center gap-2 rounded-xl bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition-all hover:bg-red-100 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                        Delete Selected ({assignmentSelection.size})
+                                    </button>
+                                )}
                             </div>
                         </div>
-
-                        {isAddingAssignment && (
-                            <div className="rounded-3xl border border-zinc-200 bg-white p-8 shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
-                                <form onSubmit={handleAssignmentSubmit} className="space-y-8">
-                                    <div className="grid gap-6 sm:grid-cols-2">
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium">{assignType === "Self" ? "Select User" : "Evaluator"}</label>
-                                            <select
-                                                required
-                                                value={selectedEvaluator}
-                                                onChange={(e) => setSelectedEvaluator(e.target.value)}
-                                                className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-800"
-                                            >
-                                                <option value="">Select User...</option>
-                                                {users.filter(u => {
-                                                    if (assignType !== "Self" && selectedEvaluatee) {
-                                                        return u.uid !== selectedEvaluatee;
-                                                    }
-                                                    return true;
-                                                }).map(u => <option key={u.uid} value={u.uid}>{u.displayName}</option>)}
-                                            </select>
-                                        </div>
-                                        {assignType !== "Self" && (
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium">Evaluatee (Reviewee)</label>
-                                                <select
-                                                    required
-                                                    value={selectedEvaluatee}
-                                                    onChange={(e) => setSelectedEvaluatee(e.target.value)}
-                                                    className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-800"
-                                                >
-                                                    <option value="">Select User...</option>
-                                                    {users.filter(u => u.uid !== selectedEvaluator).map(u => <option key={u.uid} value={u.uid}>{u.displayName}</option>)}
-                                                </select>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="space-y-4">
-                                        <label className="text-sm font-medium">Evaluation Relationship</label>
-                                        <div className="flex flex-wrap gap-3">
-                                            {["Peer to Peer", "Manager to Employee", "Employee to Manager", "Self"].map((t) => (
-                                                <button
-                                                    key={t}
-                                                    type="button"
-                                                    onClick={() => setAssignType(t as any)}
-                                                    className={`rounded-full px-6 py-2.5 text-xs font-bold uppercase tracking-widest transition-all cursor-pointer ${assignType === t
-                                                        ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
-                                                        : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400"}`}
-                                                >
-                                                    {t}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-end gap-3 border-t border-zinc-100 pt-6 dark:border-zinc-800">
-                                        <button type="button" onClick={() => setIsAddingAssignment(false)} className="px-4 py-2 text-sm text-zinc-500 cursor-pointer">Cancel</button>
-                                        <button type="submit" className="rounded-xl bg-zinc-900 px-8 py-2.5 text-sm font-bold text-white dark:bg-zinc-100 dark:text-zinc-950 cursor-pointer">
-                                            Create Assignment
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        )}
 
                         <div className="overflow-x-auto rounded-3xl bg-white shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800">
                             {assignments.length === 0 ? (
@@ -829,7 +812,13 @@ export default function PeriodDetailPage() {
                                                             />
                                                             <div>
                                                                 <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{group.name}</h4>
-                                                                <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">{group.items.length} Reviewees</p>
+                                                                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                                                                    <span>{users.find(u => u.uid === evalId)?.role}</span>
+                                                                    <span className="h-1 w-1 rounded-full bg-zinc-300" />
+                                                                    <span>{users.find(u => u.uid === evalId)?.department || "No Dept"}</span>
+                                                                    <span className="h-1 w-1 rounded-full bg-zinc-300" />
+                                                                    <span className="text-zinc-500">{group.items.length} Reviewees</span>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -874,7 +863,14 @@ export default function PeriodDetailPage() {
                                                                                         name={a.evaluateeName}
                                                                                         size="sm"
                                                                                     />
-                                                                                    <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.evaluateeName}</div>
+                                                                                    <div className="flex flex-col">
+                                                                                        <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.evaluateeName}</div>
+                                                                                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                                                                                            <span>{users.find(u => u.uid === a.evaluateeId)?.role}</span>
+                                                                                            <span className="h-1 w-1 rounded-full bg-zinc-300" />
+                                                                                            <span>{users.find(u => u.uid === a.evaluateeId)?.department || "No Dept"}</span>
+                                                                                        </div>
+                                                                                    </div>
                                                                                 </div>
                                                                             </td>
                                                                             <td className="px-6 py-4">
@@ -1016,15 +1012,12 @@ export default function PeriodDetailPage() {
                     {/* Left: Select Reviewers */}
                     <div className="p-8 space-y-6 overflow-y-auto">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-[10px] sm:text-sm font-bold uppercase tracking-widest text-zinc-400">1. Select Reviewer(s) ({bulkReviewers.size})</h3>
+                            <h3 className="text-[10px] sm:text-sm font-bold uppercase tracking-widest text-zinc-400">1. Select Reviewer ({bulkReviewers.size})</h3>
                             <button
-                                onClick={() => {
-                                    const filtered = users.filter(u => bulkDept === "All" || u.department === bulkDept);
-                                    setBulkReviewers(new Set(filtered.map(u => u.uid)));
-                                }}
+                                onClick={() => setBulkReviewers(new Set())}
                                 className="text-[9px] sm:text-[10px] font-bold uppercase text-zinc-600 hover:underline"
                             >
-                                Select All
+                                Clear
                             </button>
                         </div>
 
@@ -1066,8 +1059,8 @@ export default function PeriodDetailPage() {
                                     <div
                                         key={u.uid}
                                         onClick={() => {
-                                            const next = new Set(bulkReviewers);
-                                            if (isSelected) next.delete(u.uid); else next.add(u.uid);
+                                            const next = new Set<string>();
+                                            if (!isSelected) next.add(u.uid);
                                             setBulkReviewers(next);
                                         }}
                                         className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${isSelected ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-lg" : "hover:bg-zinc-50 dark:hover:bg-zinc-800"}`}
@@ -1076,7 +1069,9 @@ export default function PeriodDetailPage() {
                                             <Avatar src={u.photoURL} name={u.displayName} size="sm" />
                                             <div>
                                                 <p className="text-[11px] font-bold">{u.displayName}</p>
-                                                <p className={`text-[9px] ${isSelected ? "text-zinc-400" : "text-zinc-500"}`}>{u.department || "No Dept"}</p>
+                                                <p className={`text-[9px] font-bold uppercase tracking-wider ${isSelected ? "text-zinc-300" : "text-zinc-400"}`}>
+                                                    {u.role} • {u.department || "No Dept"}
+                                                </p>
                                             </div>
                                         </div>
                                         {isSelected && <CheckCircle2 className="h-4 w-4" />}
@@ -1091,16 +1086,56 @@ export default function PeriodDetailPage() {
                         <div className="space-y-4">
                             <h3 className="text-[10px] sm:text-sm font-bold uppercase tracking-widest text-zinc-400">2. Define Relationship</h3>
                             <div className="grid grid-cols-2 gap-2">
-                                {["Peer to Peer", "Manager to Employee", "Employee to Manager", "Self"].map(t => (
+                                <button
+                                    onClick={() => {
+                                        setBulkRelId("self-default");
+                                        setBulkType("Self");
+                                        setBulkReviewees(new Set());
+                                    }}
+                                    className={`py-2.5 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-widest border transition-all ${bulkRelId === "self-default" ? "bg-zinc-900 text-white border-zinc-900 shadow-md dark:bg-zinc-100 dark:text-zinc-950" : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-400 dark:bg-zinc-900 dark:border-zinc-800"}`}
+                                >
+                                    Self Evaluation
+                                </button>
+                                <button
+                                    disabled={(() => {
+                                        if (bulkReviewers.size === 0) return false;
+                                        const roles = Array.from(bulkReviewers).map(id => users.find(u => u.uid === id)?.role);
+                                        return new Set(roles).size > 1;
+                                    })()}
+                                    onClick={() => {
+                                        setBulkRelId("peer-default");
+                                        setBulkType("Peer to Peer");
+                                    }}
+                                    className={`py-2.5 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-widest border transition-all ${bulkRelId === "peer-default" ? "bg-zinc-900 text-white border-zinc-900 shadow-md dark:bg-zinc-100 dark:text-zinc-950" : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-400 dark:bg-zinc-900 dark:border-zinc-800 disabled:opacity-50"}`}
+                                >
+                                    Peer to Peer
+                                </button>
+                                {roleRelationships.filter(rel => {
+                                    if (bulkReviewers.size === 0) return true;
+
+                                    const selectedReviewerRoles = Array.from(bulkReviewers)
+                                        .map(id => users.find(u => u.uid === id)?.role)
+                                        .filter(Boolean);
+
+                                    // Find role object by ID (standard) or Name (fallback)
+                                    const reviewerRoleObj = compRoles.find(r => r.id === rel.reviewerRoleId || r.name === rel.reviewerRoleId);
+                                    if (!reviewerRoleObj) return false;
+
+                                    return selectedReviewerRoles.every(r => r === reviewerRoleObj.name);
+                                }).map(rel => (
                                     <button
-                                        key={t}
+                                        key={rel.id}
                                         onClick={() => {
-                                            setBulkType(t as any);
-                                            if (t === "Self") setBulkReviewees(new Set());
+                                            setBulkRelId(rel.id);
+                                            setBulkType(rel.name);
+                                            if (rel.revieweeRoleId === "self") {
+                                                setBulkReviewees(new Set());
+                                                setBulkType("Self");
+                                            }
                                         }}
-                                        className={`py-2.5 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-widest border transition-all ${bulkType === t ? "bg-zinc-900 text-white border-zinc-900 shadow-md dark:bg-zinc-100 dark:text-zinc-950" : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-400 dark:bg-zinc-900 dark:border-zinc-800"}`}
+                                        className={`py-2.5 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-widest border transition-all ${bulkRelId === rel.id ? "bg-zinc-900 text-white border-zinc-900 shadow-md dark:bg-zinc-100 dark:text-zinc-950" : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-400 dark:bg-zinc-900 dark:border-zinc-800"}`}
                                     >
-                                        {t}
+                                        {rel.name}
                                     </button>
                                 ))}
                             </div>
@@ -1119,6 +1154,25 @@ export default function PeriodDetailPage() {
                                 </div>
                                 <div className="space-y-1">
                                     {users.filter(u => {
+                                        if (!bulkRelId) return false;
+
+                                        // Role Filtering Logic
+                                        const targetRole = (() => {
+                                            if (bulkRelId === "peer-default") {
+                                                // Reviewee role must match the reviewer(s) role
+                                                return users.find(rev => bulkReviewers.has(rev.uid))?.role;
+                                            }
+                                            if (bulkRelId === "self-default") return null;
+
+                                            const rel = roleRelationships.find(r => r.id === bulkRelId);
+                                            if (!rel || rel.revieweeRoleId === "self") return null;
+
+                                            const roleObj = compRoles.find(r => r.id === rel.revieweeRoleId || r.name === rel.revieweeRoleId);
+                                            return roleObj?.name;
+                                        })();
+
+                                        if (targetRole && u.role !== targetRole) return false;
+
                                         // Hide reviewees who are already being evaluated by ANY of the selected reviewers
                                         if (bulkReviewers.size > 0) {
                                             // 1. Check if they already have an assignment
@@ -1145,7 +1199,12 @@ export default function PeriodDetailPage() {
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <Avatar src={u.photoURL} name={u.displayName} size="sm" />
-                                                    <p className="text-[11px] font-bold">{u.displayName}</p>
+                                                    <div>
+                                                        <p className="text-[11px] font-bold">{u.displayName}</p>
+                                                        <p className={`text-[9px] font-bold uppercase tracking-wider ${isSelected ? "text-zinc-300" : "text-zinc-400"}`}>
+                                                            {u.role} • {u.department || "No Dept"}
+                                                        </p>
+                                                    </div>
                                                 </div>
                                                 {isSelected && <CheckCircle2 className="h-4 w-4" />}
                                             </div>

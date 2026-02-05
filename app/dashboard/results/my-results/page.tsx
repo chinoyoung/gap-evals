@@ -13,6 +13,7 @@ import {
     orderBy
 } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 import {
     Loader2,
     TrendingUp,
@@ -57,24 +58,6 @@ import { Select } from "@/components/ui/Select";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
-
-interface Evaluation {
-    id: string;
-    assignmentId: string;
-    evaluateeId: string;
-    evaluateeName: string;
-    responses: Record<string, any>;
-    submittedAt: any;
-    shared?: boolean;
-    type?: string;
-}
-
-interface Question {
-    id: string;
-    text: string;
-    type: "scale" | "paragraph";
-    order?: number;
-}
 
 interface GroupedResult {
     type: string;
@@ -249,6 +232,19 @@ export default function MyResultsPage() {
         }
     };
 
+    const getTypeColor = (type: string) => {
+        switch (type) {
+            case 'Self': return { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400', badge: 'blue' as const, glass: 'bg-blue-500/10' };
+            case 'Manager to Member': return { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-600 dark:text-amber-400', badge: 'amber' as const, glass: 'bg-amber-500/10' };
+            case 'Member to Manager': return { bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-600 dark:text-rose-400', badge: 'red' as const, glass: 'bg-rose-500/10' };
+            case 'Lead to Member': return { bg: 'bg-indigo-50 dark:bg-indigo-900/20', text: 'text-indigo-600 dark:text-indigo-400', badge: 'indigo' as const, glass: 'bg-indigo-500/10' };
+            case 'Member to Lead': return { bg: 'bg-violet-50 dark:bg-violet-900/20', text: 'text-violet-600 dark:text-violet-400', badge: 'indigo' as const, glass: 'bg-violet-500/10' };
+            case 'Lead to Manager': return { bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-600 dark:text-rose-400', badge: 'red' as const, glass: 'bg-rose-500/10' };
+            case 'Manager to Lead': return { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-600 dark:text-amber-400', badge: 'amber' as const, glass: 'bg-amber-500/10' };
+            default: return { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400', badge: 'emerald' as const, glass: 'bg-emerald-500/10' };
+        }
+    };
+
     if (loading) {
         return <Loading className="py-20" />;
     }
@@ -300,7 +296,11 @@ export default function MyResultsPage() {
                             className="flex w-full items-center justify-between p-6 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer"
                         >
                             <div className="flex items-center gap-5">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 shadow-lg shadow-zinc-900/10">
+                                <div className={cn(
+                                    "flex h-12 w-12 items-center justify-center rounded-2xl shadow-lg shadow-zinc-900/10",
+                                    getTypeColor(group.type).text,
+                                    getTypeColor(group.type).bg
+                                )}>
                                     <BarChart3 className="h-6 w-6" />
                                 </div>
                                 <div>
@@ -308,7 +308,7 @@ export default function MyResultsPage() {
                                         {group.type.replace(/-/g, " ")} Feedback
                                     </h3>
                                     <div className="mt-1 flex items-center gap-2">
-                                        <Badge variant="zinc">
+                                        <Badge variant={getTypeColor(group.type).badge}>
                                             {group.count} {group.count === 1 ? 'evaluation' : 'evaluations'}
                                         </Badge>
                                         <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Anonymous</span>
@@ -377,7 +377,7 @@ export default function MyResultsPage() {
                                         )}
 
                                         {/* Paragraph Comments */}
-                                        {questions.filter(q => q.type === "paragraph").length > 0 && (
+                                        {questions.filter(q => q.type === "paragraph").length > 0 && group.type === "Self" && (
                                             <div className="space-y-8">
                                                 <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
                                                     <MessageSquare className="h-3.5 w-3.5" />

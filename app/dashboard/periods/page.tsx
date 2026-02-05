@@ -48,7 +48,7 @@ interface Period {
 }
 
 export default function PeriodsPage() {
-    const { role } = useAuth();
+    const { isAdmin } = useAuth();
     const [periods, setPeriods] = useState<Period[]>([]);
     const [loading, setLoading] = useState(true);
     const [showNewModal, setShowNewModal] = useState(false);
@@ -127,7 +127,7 @@ export default function PeriodsPage() {
         setNewEnd("");
     };
 
-    if (role !== "Admin") {
+    if (!isAdmin) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center">
                 <AlertCircle className="mb-4 h-12 w-12 text-red-500" />

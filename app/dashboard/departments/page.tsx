@@ -42,7 +42,7 @@ interface Department {
 }
 
 export default function DepartmentsPage() {
-    const { role } = useAuth();
+    const { isAdmin } = useAuth();
     const [departments, setDepartments] = useState<Department[]>([]);
     const [isAdding, setIsAdding] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -128,7 +128,7 @@ export default function DepartmentsPage() {
         d.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    if (role !== "Admin") {
+    if (!isAdmin) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center">
                 <AlertCircle className="mb-4 h-12 w-12 text-red-500" />

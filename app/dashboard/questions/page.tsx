@@ -104,7 +104,7 @@ function SortableQuestionItem({
 }
 
 export default function QuestionsPage() {
-    const { role } = useAuth();
+    const { isAdmin } = useAuth();
     const { success, error: toastError } = useToast();
     const { questions, loading, setQuestions } = useQuestions();
 
@@ -210,7 +210,7 @@ export default function QuestionsPage() {
         typeFilter === "all" ? true : q.type === typeFilter
     );
 
-    if (role !== "Admin") {
+    if (!isAdmin) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center">
                 <AlertCircle className="mb-4 h-12 w-12 text-red-500" />

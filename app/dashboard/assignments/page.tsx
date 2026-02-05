@@ -57,7 +57,7 @@ interface Assignment {
 }
 
 export default function AssignmentsPage() {
-    const { role } = useAuth();
+    const { isAdmin } = useAuth();
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -139,7 +139,7 @@ export default function AssignmentsPage() {
         return evaluatee?.departmentId === deptFilter;
     });
 
-    if (role !== "Admin") {
+    if (!isAdmin) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center">
                 <AlertCircle className="mb-4 h-12 w-12 text-red-500" />

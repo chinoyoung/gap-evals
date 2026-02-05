@@ -13,6 +13,7 @@ import {
     deleteDoc
 } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 import {
     Loader2,
     AlertCircle,
@@ -32,21 +33,6 @@ import {
     Share2,
     Trash2
 } from "lucide-react";
-
-interface Evaluation {
-    id: string;
-    assignmentId: string;
-    evaluatorId: string;
-    evaluatorName?: string;
-    evaluateeName: string;
-    responses: Record<string, any>;
-    submittedAt: any;
-    archived?: boolean;
-    shared?: boolean;
-    evaluateeId?: string;
-    periodId?: string;
-    periodName?: string;
-}
 
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -73,6 +59,7 @@ interface Evaluation {
     evaluateeId?: string;
     periodId?: string;
     periodName?: string;
+    type?: string;
 }
 
 interface Question {
@@ -80,10 +67,11 @@ interface Question {
     text: string;
     type: "scale" | "paragraph";
     order?: number;
+    scope?: "all" | "self";
 }
 
 export default function ResultsPage() {
-    const { role } = useAuth();
+    const { isAdmin } = useAuth();
     const [periods, setPeriods] = useState<any[]>([]);
     const [selectedPeriodId, setSelectedPeriodId] = useState<string>("");
     const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
@@ -156,6 +144,19 @@ export default function ResultsPage() {
         }
     };
 
+    const getTypeColor = (type: string) => {
+        switch (type) {
+            case 'Self': return { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400', badge: 'blue' as const };
+            case 'Manager to Member': return { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-600 dark:text-amber-400', badge: 'amber' as const };
+            case 'Member to Manager': return { bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-600 dark:text-rose-400', badge: 'red' as const };
+            case 'Lead to Member': return { bg: 'bg-indigo-50 dark:bg-indigo-900/20', text: 'text-indigo-600 dark:text-indigo-400', badge: 'indigo' as const };
+            case 'Member to Lead': return { bg: 'bg-violet-50 dark:bg-violet-900/20', text: 'text-violet-600 dark:text-violet-400', badge: 'indigo' as const };
+            case 'Lead to Manager': return { bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-600 dark:text-rose-400', badge: 'red' as const };
+            case 'Manager to Lead': return { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-600 dark:text-amber-400', badge: 'amber' as const };
+            default: return { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400', badge: 'emerald' as const };
+        }
+    };
+
     const fetchData = async () => {
         setLoading(true);
         try {
@@ -217,7 +218,7 @@ export default function ResultsPage() {
         }
     };
 
-    if (role !== "Admin") {
+    if (!isAdmin) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center">
                 <AlertCircle className="mb-4 h-12 w-12 text-red-500" />
@@ -340,13 +341,18 @@ export default function ResultsPage() {
                                                             </div>
 
                                                             <div className="flex items-center gap-3 mb-6">
-                                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm text-zinc-500 dark:bg-zinc-800">
+                                                                <div className={cn(
+                                                                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm dark:bg-zinc-800",
+                                                                    getTypeColor(ev.type || "").text
+                                                                )}>
                                                                     <User className="h-5 w-5" />
                                                                 </div>
                                                                 <div>
-                                                                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Evaluated By</p>
+                                                                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                                                                        {ev.type === "Self" ? "Type" : "Evaluated By"}
+                                                                    </p>
                                                                     <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                                                                        {ev.evaluatorName || "Anonymous"}
+                                                                        {ev.type === "Self" ? "Self Evaluation" : (ev.evaluatorName || "Anonymous")}
                                                                     </h4>
                                                                 </div>
                                                             </div>
@@ -357,7 +363,9 @@ export default function ResultsPage() {
                                                                         <Clock className="h-3.5 w-3.5" />
                                                                         <span>{ev.submittedAt?.toDate().toLocaleDateString()}</span>
                                                                     </div>
-                                                                    <Badge variant="zinc">View Details</Badge>
+                                                                    <Badge variant={getTypeColor(ev.type || "Peer").badge}>
+                                                                        {ev.type || "Peer"}
+                                                                    </Badge>
                                                                 </div>
                                                             </div>
                                                         </Card>
@@ -400,7 +408,11 @@ export default function ResultsPage() {
                                             {selectedEvaluation.evaluateeName}
                                         </h2>
                                         <p className="text-xs font-medium text-zinc-500 flex items-center gap-2">
-                                            <span>By {selectedEvaluation.evaluatorName || "Anonymous"}</span>
+                                            <span>
+                                                {selectedEvaluation.type === "Self"
+                                                    ? "Self Evaluation"
+                                                    : `By ${selectedEvaluation.evaluatorName || "Anonymous"}`}
+                                            </span>
                                             <span className="h-1 w-1 rounded-full bg-zinc-300" />
                                             <span>{selectedEvaluation.submittedAt?.toDate().toLocaleString()}</span>
                                         </p>
@@ -423,49 +435,56 @@ export default function ResultsPage() {
 
                             <div className="flex-1 overflow-y-auto p-6 sm:p-8">
                                 <div className="space-y-8">
-                                    {questions.map((q) => (
-                                        <div key={q.id} className="space-y-4">
-                                            <h5 className="text-sm font-bold text-zinc-900 dark:text-zinc-50 tracking-tight leading-snug">
-                                                {q.text}
-                                            </h5>
-                                            <div className="rounded-2xl bg-zinc-50 p-6 ring-1 ring-zinc-100 dark:bg-zinc-800/50 dark:ring-zinc-800">
-                                                {q.type === 'scale' ? (
-                                                    <div className="space-y-6">
-                                                        <div className="flex items-center gap-6">
-                                                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-zinc-900 text-base font-black text-white dark:bg-white dark:text-zinc-950 shadow-xl shadow-zinc-900/10">
-                                                                {selectedEvaluation.responses[q.id] || "N/A"}
-                                                            </div>
-                                                            <div className="flex-1">
-                                                                <div className="h-2 w-full rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
-                                                                    <motion.div
-                                                                        initial={{ width: 0 }}
-                                                                        animate={{ width: `${(selectedEvaluation.responses[q.id] === "N/A" ? 0 : (selectedEvaluation.responses[q.id] || 0)) * 10}%` }}
-                                                                        className="h-full bg-zinc-900 dark:bg-white"
-                                                                    />
+                                    {questions.map((q) => {
+                                        // Only show paragraph questions for Self evaluations
+                                        if (q.type === 'paragraph' && selectedEvaluation.type !== 'Self') {
+                                            return null;
+                                        }
+
+                                        return (
+                                            <div key={q.id} className="space-y-4">
+                                                <h5 className="text-sm font-bold text-zinc-900 dark:text-zinc-50 tracking-tight leading-snug">
+                                                    {q.text}
+                                                </h5>
+                                                <div className="rounded-2xl bg-zinc-50 p-6 ring-1 ring-zinc-100 dark:bg-zinc-800/50 dark:ring-zinc-800">
+                                                    {q.type === 'scale' ? (
+                                                        <div className="space-y-6">
+                                                            <div className="flex items-center gap-6">
+                                                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-zinc-900 text-base font-black text-white dark:bg-white dark:text-zinc-950 shadow-xl shadow-zinc-900/10">
+                                                                    {selectedEvaluation.responses[q.id] || "N/A"}
                                                                 </div>
-                                                                <div className="mt-3 flex justify-between text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                                                                    <span>Poor</span>
-                                                                    <span>Average</span>
-                                                                    <span>Exceptional</span>
+                                                                <div className="flex-1">
+                                                                    <div className="h-2 w-full rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                                                                        <motion.div
+                                                                            initial={{ width: 0 }}
+                                                                            animate={{ width: `${(selectedEvaluation.responses[q.id] === "N/A" ? 0 : (selectedEvaluation.responses[q.id] || 0)) * 10}%` }}
+                                                                            className="h-full bg-zinc-900 dark:bg-white"
+                                                                        />
+                                                                    </div>
+                                                                    <div className="mt-3 flex justify-between text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                                                                        <span>Poor</span>
+                                                                        <span>Average</span>
+                                                                        <span>Exceptional</span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
+                                                            {selectedEvaluation.responses[`${q.id}_comment`] && (
+                                                                <div className="mt-4 pl-4 border-l-2 border-zinc-200 dark:border-zinc-700">
+                                                                    <p className="text-sm italic text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                                                                        "{selectedEvaluation.responses[`${q.id}_comment`]}"
+                                                                    </p>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                        {selectedEvaluation.responses[`${q.id}_comment`] && (
-                                                            <div className="mt-4 pl-4 border-l-2 border-zinc-200 dark:border-zinc-700">
-                                                                <p className="text-sm italic text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                                                                    "{selectedEvaluation.responses[`${q.id}_comment`]}"
-                                                                </p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap font-medium">
-                                                        {selectedEvaluation.responses[q.id] || "No response provided."}
-                                                    </p>
-                                                )}
+                                                    ) : (
+                                                        <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap font-medium">
+                                                            {selectedEvaluation.responses[q.id] || "No response provided."}
+                                                        </p>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </motion.div>

@@ -45,9 +45,16 @@ interface UserProfile {
     id: string;
     email: string;
     displayName: string;
-    role: "Admin" | "Manager" | "Employee";
+    role: string;
     photoURL?: string;
     departmentId?: string;
+}
+
+interface Role {
+    id: string;
+    name: string;
+    isAdmin?: boolean;
+    canManageTeam?: boolean;
 }
 
 interface Department {
@@ -64,12 +71,13 @@ export default function TeamPage() {
 }
 
 function TeamDirectory() {
-    const { user: authUser, role: currentUserRole } = useAuth();
+    const { user: authUser, role: currentUserRole, isAdmin, canManageTeam } = useAuth();
     const searchParams = useSearchParams();
     const initialDept = searchParams.get("dept") || "all";
 
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
+    const [roles, setRoles] = useState<Role[]>([]);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState<string | null>(null);
     const [deptFilter, setDeptFilter] = useState(initialDept);
@@ -87,13 +95,15 @@ function TeamDirectory() {
 
     const fetchData = async () => {
         try {
-            const [usersSnap, deptsSnap] = await Promise.all([
+            const [usersSnap, deptsSnap, rolesSnap] = await Promise.all([
                 getDocs(query(collection(db, "users"), orderBy("email", "asc"))),
-                getDocs(query(collection(db, "departments"), orderBy("name", "asc")))
+                getDocs(query(collection(db, "departments"), orderBy("name", "asc"))),
+                getDocs(query(collection(db, "roles"), orderBy("name", "asc")))
             ]);
 
             setUsers(usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile)));
             setDepartments(deptsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Department)));
+            setRoles(rolesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Role)));
         } catch (error) {
             console.error("Error fetching data", error);
         } finally {
@@ -157,22 +167,22 @@ function TeamDirectory() {
     };
 
     const currentUserProfile = users.find(u => u.id === authUser?.uid);
-    const managerDeptId = currentUserRole === "Manager" ? currentUserProfile?.departmentId : null;
+    const managerDeptId = (canManageTeam && !isAdmin) ? currentUserProfile?.departmentId : null;
 
     const filteredUsers = users.filter((u: UserProfile) => {
-        if (currentUserRole === "Manager") {
+        if (canManageTeam && !isAdmin) {
             return u.departmentId === managerDeptId;
         }
         if (deptFilter === "all") return true;
         return u.departmentId === deptFilter;
     });
 
-    if (currentUserRole !== "Admin" && currentUserRole !== "Manager") {
+    if (!canManageTeam && !isAdmin) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center">
                 <AlertCircle className="mb-4 h-12 w-12 text-red-500" />
                 <h1 className="text-xl font-semibold">Access Denied</h1>
-                <p className="text-zinc-500">Only administrators and managers can view the team directory.</p>
+                <p className="text-zinc-500">Only administrators, managers, and team leads can view the team directory.</p>
             </div>
         );
     }
@@ -182,14 +192,14 @@ function TeamDirectory() {
     return (
         <div className="space-y-8">
             <PageHeader
-                title={currentUserRole === "Manager" ? `${managerDeptName || "Department"} Team` : "Team Directory"}
-                description={currentUserRole === "Manager"
+                title={(canManageTeam && !isAdmin) ? `${managerDeptName || "Department"} Team` : "Team Directory"}
+                description={(canManageTeam && !isAdmin)
                     ? `Viewing members of the ${managerDeptName || "assigned"} department.`
                     : "Manage user permissions and roles for your organization."
                 }
             />
 
-            {currentUserRole === "Admin" && (
+            {isAdmin && (
                 <div className="flex items-center justify-end">
                     <div className="w-64">
                         <Select
@@ -243,7 +253,7 @@ function TeamDirectory() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            {currentUserRole === "Admin" ? (
+                                            {isAdmin ? (
                                                 <select
                                                     disabled={updating === user.id}
                                                     value={user.departmentId || ""}
@@ -263,16 +273,17 @@ function TeamDirectory() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
-                                                {currentUserRole === "Admin" ? (
+                                                {isAdmin ? (
                                                     <select
                                                         disabled={updating === user.id}
                                                         value={user.role}
-                                                        onChange={(e) => handleUpdate(user.id, { role: e.target.value as any })}
+                                                        onChange={(e) => handleUpdate(user.id, { role: e.target.value })}
                                                         className="bg-transparent text-sm font-medium text-zinc-600 dark:text-zinc-300 focus:outline-none cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
                                                     >
-                                                        <option value="Admin" className="dark:bg-zinc-800">Admin</option>
-                                                        <option value="Manager" className="dark:bg-zinc-800">Manager</option>
-                                                        <option value="Employee" className="dark:bg-zinc-800">Employee</option>
+                                                        <option value="" className="dark:bg-zinc-800">No Role</option>
+                                                        {roles.map((r) => (
+                                                            <option key={r.id} value={r.name} className="dark:bg-zinc-800">{r.name}</option>
+                                                        ))}
                                                     </select>
                                                 ) : (
                                                     <span className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
@@ -283,15 +294,14 @@ function TeamDirectory() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            {user.role === "Admin" ? (
-                                                <Badge variant="amber" icon={Shield}>Full Access</Badge>
-                                            ) : user.role === "Manager" ? (
-                                                <Badge variant="blue" icon={Briefcase}>Management</Badge>
-                                            ) : (
-                                                <Badge variant="zinc" icon={UserCircle}>Standard</Badge>
-                                            )}
+                                            {(() => {
+                                                const userRole = roles.find(r => r.name === user.role);
+                                                if (userRole?.isAdmin) return <Badge variant="amber" icon={Shield}>Admin Access</Badge>;
+                                                if (userRole?.canManageTeam) return <Badge variant="blue" icon={Briefcase}>Department Lead</Badge>;
+                                                return <Badge variant="zinc" icon={UserCircle}>Team Member</Badge>;
+                                            })()}
                                         </td>
-                                        {currentUserRole === "Admin" && (
+                                        {isAdmin && (
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex items-center justify-end gap-1">
                                                     <Button

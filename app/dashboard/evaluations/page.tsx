@@ -145,7 +145,13 @@ export default function EvaluationsPage() {
                                                         {a.evaluateeName}
                                                     </h3>
                                                 </div>
-                                                <p className="text-sm text-zinc-500">{a.periodName}</p>
+                                                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                                                    <span>{users.find(u => u.id === a.evaluateeId)?.role || "Member"}</span>
+                                                    <span className="h-1 w-1 rounded-full bg-zinc-300" />
+                                                    <span>{users.find(u => u.id === a.evaluateeId)?.department || "No Dept"}</span>
+                                                    <span className="h-1 w-1 rounded-full bg-zinc-300" />
+                                                    <span className="text-zinc-500 truncate max-w-[150px]">{a.periodName}</span>
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="mt-2 flex flex-wrap items-center gap-4 text-xs font-semibold text-zinc-500">

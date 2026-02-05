@@ -12,6 +12,7 @@ import {
     LogOut,
     Menu,
     X,
+    ShieldCheck,
     ClipboardCheck,
     UserCircle,
     BarChart3,
@@ -29,7 +30,7 @@ export default function DashboardLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const { user, loading, role, logOut } = useAuth();
+    const { user, loading, role, isAdmin, canManageTeam, logOut } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -55,22 +56,18 @@ export default function DashboardLayout({
                 { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
             ]
         },
-        ...(role === "Admin" ? [{
+        ...(isAdmin ? [{
             label: "Administration",
             items: [
                 { name: "Evaluation Periods", href: "/dashboard/periods", icon: CalendarDays },
                 { name: "Questions Library", href: "/dashboard/questions", icon: FileText },
                 { name: "Departments", href: "/dashboard/departments", icon: Building2 },
                 { name: "Team Members", href: "/dashboard/team", icon: Users },
+                { name: "Roles & Workflow", href: "/dashboard/settings/roles", icon: ShieldCheck },
                 { name: "All Results", href: "/dashboard/results", icon: BarChart3 },
             ]
         }] : []),
-        ...(role === "Manager" ? [{
-            label: "Management",
-            items: [
-                { name: "My Team", href: "/dashboard/team", icon: Users },
-            ]
-        }] : []),
+
         {
             label: "Personal Workspace",
             items: [
@@ -92,10 +89,10 @@ export default function DashboardLayout({
                     <ThemeToggle />
                 </div>
 
-                <nav className={cn("flex-1 overflow-y-auto pr-2 custom-scrollbar", role === "Admin" ? "space-y-8" : "space-y-1")}>
+                <nav className={cn("flex-1 overflow-y-auto pr-2 custom-scrollbar", isAdmin ? "space-y-8" : "space-y-1")}>
                     {navGroups.map((group) => (
-                        <div key={group.label} className={cn("space-y-2", role !== "Admin" && "space-y-1")}>
-                            {role === "Admin" && (
+                        <div key={group.label} className={cn("space-y-2", !isAdmin && "space-y-1")}>
+                            {isAdmin && (
                                 <h3 className="px-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400/25">
                                     {group.label}
                                 </h3>
@@ -174,10 +171,10 @@ export default function DashboardLayout({
                         exit={{ opacity: 0, y: -10 }}
                         className="fixed inset-0 z-40 lg:hidden bg-white dark:bg-zinc-950 pt-24 p-6"
                     >
-                        <nav className={cn("overflow-y-auto max-h-[70vh] pr-2 custom-scrollbar", role === "Admin" ? "space-y-6" : "space-y-1")}>
+                        <nav className={cn("overflow-y-auto max-h-[70vh] pr-2 custom-scrollbar", isAdmin ? "space-y-6" : "space-y-1")}>
                             {navGroups.map((group) => (
-                                <div key={group.label} className={cn("space-y-3", role !== "Admin" && "space-y-1")}>
-                                    {role === "Admin" && (
+                                <div key={group.label} className={cn("space-y-3", !isAdmin && "space-y-1")}>
+                                    {isAdmin && (
                                         <h3 className="px-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
                                             {group.label}
                                         </h3>

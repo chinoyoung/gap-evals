@@ -48,7 +48,7 @@ export default function LoginPage() {
             GAP Evaluator
           </h1>
           <p className="mt-2 text-zinc-500 dark:text-zinc-400">
-            Secure access for GoAbroad.com team members
+            Secure access for authorized team members
           </p>
         </div>
 
@@ -78,7 +78,7 @@ export default function LoginPage() {
           </button>
 
           <p className="mt-6 text-center text-xs text-zinc-400 dark:text-zinc-500">
-            Only @goabroad.com emails are authorized to access this platform.
+            Please use your authorized email to access this platform.
           </p>
         </div>
       </motion.div>

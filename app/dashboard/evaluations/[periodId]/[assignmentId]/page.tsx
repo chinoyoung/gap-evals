@@ -212,7 +212,7 @@ export default function EvaluationForm() {
                         { val: "3", label: "Below Average", desc: "Performance is below average and fails to meet position requirements." },
                         { val: "2", label: "Needs Improvement", desc: "Performance needs improvement and fails to meet position requirements." },
                         { val: "1", label: "Poor", desc: "Performance is poor and consistently fails to meet position requirements." },
-                        { val: "N/A", label: "New / Not Applicable", desc: "Employee has not been in position long enough to have demonstrated essential elements." }
+                        { val: "N/A", label: "New / Not Applicable", desc: "Member has not been in position long enough to have demonstrated essential elements." }
                     ].map((item) => (
                         <div key={item.val} className="flex gap-4 items-start">
                             <span className="flex h-8 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-xs font-bold text-white dark:bg-white dark:text-zinc-950">
