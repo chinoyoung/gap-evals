@@ -31,7 +31,10 @@ import {
     List,
     MoreHorizontal,
     CheckSquare,
-    Square
+    Square,
+    ChevronLeft,
+    ChevronRight,
+    Search
 } from "lucide-react";
 
 // Dnd Kit Imports
@@ -130,6 +133,10 @@ export default function QuestionsPage() {
     const [presetDesc, setPresetDesc] = useState("");
     const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(new Set());
 
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
+
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
         useSensor(KeyboardSensor, {
@@ -226,6 +233,10 @@ export default function QuestionsPage() {
         }
     }, [activeTab]);
 
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [typeFilter, questions.length]);
+
     const fetchPresets = async () => {
         try {
             const snap = await getDocs(query(collection(db, "question_presets"), orderBy("createdAt", "desc")));
@@ -298,6 +309,12 @@ export default function QuestionsPage() {
         typeFilter === "all" ? true : q.type === typeFilter
     );
 
+    const totalPages = Math.ceil(filteredQuestions.length / ITEMS_PER_PAGE);
+    const paginatedQuestions = filteredQuestions.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
+
     if (!isAdmin) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -317,14 +334,14 @@ export default function QuestionsPage() {
                 <div className="flex bg-zinc-100 p-1 rounded-xl dark:bg-zinc-800">
                     <button
                         onClick={() => setActiveTab("questions")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "questions" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400"}`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:cursor-pointer ${activeTab === "questions" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-500 dark:text-white" : "text-zinc-500 hover:text-zinc-500 dark:text-zinc-400"}`}
                     >
                         <List className="h-4 w-4" />
                         Questions
                     </button>
                     <button
                         onClick={() => setActiveTab("presets")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "presets" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400"}`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:cursor-pointer ${activeTab === "presets" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-500 dark:text-white" : "text-zinc-500 hover:text-zinc-500 dark:text-zinc-400"}`}
                     >
                         <Layers className="h-4 w-4" />
                         Presets
@@ -389,11 +406,11 @@ export default function QuestionsPage() {
                                 modifiers={[restrictToVerticalAxis]}
                             >
                                 <SortableContext
-                                    items={filteredQuestions.map((q) => q.id)}
+                                    items={paginatedQuestions.map((q) => q.id)}
                                     strategy={verticalListSortingStrategy}
                                 >
                                     <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                                        {filteredQuestions.map((q) => (
+                                        {paginatedQuestions.map((q) => (
                                             <SortableQuestionItem
                                                 key={q.id}
                                                 q={q}
@@ -404,6 +421,29 @@ export default function QuestionsPage() {
                                     </div>
                                 </SortableContext>
                             </DndContext>
+                        )}
+                        {filteredQuestions.length > 0 && (
+                            <div className="flex items-center justify-between border-t border-zinc-100 bg-zinc-50 px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900/50">
+                                <p className="text-xs text-zinc-500">
+                                    Showing <span className="font-bold text-zinc-900 dark:text-zinc-100">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to <span className="font-bold text-zinc-900 dark:text-zinc-100">{Math.min(currentPage * ITEMS_PER_PAGE, filteredQuestions.length)}</span> of <span className="font-bold text-zinc-900 dark:text-zinc-100">{filteredQuestions.length}</span> questions
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300 hover:text-zinc-700 disabled:opacity-50 disabled:hover:border-zinc-200 disabled:hover:text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-100"
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300 hover:text-zinc-700 disabled:opacity-50 disabled:hover:border-zinc-200 disabled:hover:text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-100"
+                                    >
+                                        <ChevronRight className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </div>
                         )}
                     </Card>
                 </div>
