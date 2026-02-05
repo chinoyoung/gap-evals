@@ -673,9 +673,9 @@ export default function QuestionsPage() {
                                                 }
                                                 setSelectedQuestionIds(next);
                                             }}
-                                            className={`p-3 rounded-xl border flex gap-3 cursor-pointer transition-all ${isSelected ? "opacity-50 bg-zinc-50 border-zinc-200" : "hover:border-zinc-400 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"}`}
+                                            className={`p-3 rounded-xl border flex gap-3 cursor-pointer transition-all ${isSelected ? "bg-zinc-50 border-zinc-300 dark:bg-zinc-800/50 dark:border-zinc-700" : "hover:border-zinc-400 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"}`}
                                         >
-                                            <div className={`h-4 w-4 rounded-md border flex items-center justify-center flex-shrink-0 ${isSelected ? "bg-zinc-900 border-zinc-900 text-white" : "border-zinc-300"}`}>
+                                            <div className={`h-4 w-4 rounded-md border flex items-center justify-center flex-shrink-0 ${isSelected ? "bg-zinc-900 border-zinc-900 text-white dark:bg-white dark:border-white dark:text-zinc-900" : "border-zinc-300 dark:border-zinc-600"}`}>
                                                 {isSelected && <Check className="h-3 w-3" />}
                                             </div>
                                             <div>
