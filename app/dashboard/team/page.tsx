@@ -64,7 +64,7 @@ export default function TeamPage() {
 }
 
 function TeamDirectory() {
-    const { role: currentUserRole } = useAuth();
+    const { user: authUser, role: currentUserRole } = useAuth();
     const searchParams = useSearchParams();
     const initialDept = searchParams.get("dept") || "all";
 
@@ -156,41 +156,54 @@ function TeamDirectory() {
         setEditEmail(user.email || "");
     };
 
+    const currentUserProfile = users.find(u => u.id === authUser?.uid);
+    const managerDeptId = currentUserRole === "Manager" ? currentUserProfile?.departmentId : null;
+
     const filteredUsers = users.filter((u: UserProfile) => {
+        if (currentUserRole === "Manager") {
+            return u.departmentId === managerDeptId;
+        }
         if (deptFilter === "all") return true;
         return u.departmentId === deptFilter;
     });
 
-    if (currentUserRole !== "Admin") {
+    if (currentUserRole !== "Admin" && currentUserRole !== "Manager") {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center">
                 <AlertCircle className="mb-4 h-12 w-12 text-red-500" />
                 <h1 className="text-xl font-semibold">Access Denied</h1>
-                <p className="text-zinc-500">Only administrators can manage the team.</p>
+                <p className="text-zinc-500">Only administrators and managers can view the team directory.</p>
             </div>
         );
     }
 
+    const managerDeptName = managerDeptId ? departments.find(d => d.id === managerDeptId)?.name : null;
+
     return (
         <div className="space-y-8">
             <PageHeader
-                title="Team Directory"
-                description="Manage user permissions and roles for your organization."
+                title={currentUserRole === "Manager" ? `${managerDeptName || "Department"} Team` : "Team Directory"}
+                description={currentUserRole === "Manager"
+                    ? `Viewing members of the ${managerDeptName || "assigned"} department.`
+                    : "Manage user permissions and roles for your organization."
+                }
             />
 
-            <div className="flex items-center justify-end">
-                <div className="w-64">
-                    <Select
-                        value={deptFilter}
-                        onChange={(e) => setDeptFilter(e.target.value)}
-                    >
-                        <option value="all">All Departments</option>
-                        {departments.map((d: Department) => (
-                            <option key={d.id} value={d.id}>{d.name}</option>
-                        ))}
-                    </Select>
+            {currentUserRole === "Admin" && (
+                <div className="flex items-center justify-end">
+                    <div className="w-64">
+                        <Select
+                            value={deptFilter}
+                            onChange={(e) => setDeptFilter(e.target.value)}
+                        >
+                            <option value="all">All Departments</option>
+                            {departments.map((d: Department) => (
+                                <option key={d.id} value={d.id}>{d.name}</option>
+                            ))}
+                        </Select>
+                    </div>
                 </div>
-            </div>
+            )}
 
             <Card className="overflow-hidden">
                 {loading ? (
@@ -210,7 +223,7 @@ function TeamDirectory() {
                                     <th className="px-6 py-4">Department</th>
                                     <th className="px-6 py-4">Role</th>
                                     <th className="px-6 py-4">Access Level</th>
-                                    <th className="px-6 py-4 text-right">Actions</th>
+                                    {currentUserRole === "Admin" && <th className="px-6 py-4 text-right">Actions</th>}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -230,30 +243,42 @@ function TeamDirectory() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <select
-                                                disabled={updating === user.id}
-                                                value={user.departmentId || ""}
-                                                onChange={(e) => handleUpdate(user.id, { departmentId: e.target.value })}
-                                                className="bg-transparent text-sm font-medium text-zinc-600 dark:text-zinc-300 focus:outline-none cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-                                            >
-                                                <option value="" className="dark:bg-zinc-800">No Department</option>
-                                                {departments.map((d: Department) => (
-                                                    <option key={d.id} value={d.id} className="dark:bg-zinc-800">{d.name}</option>
-                                                ))}
-                                            </select>
+                                            {currentUserRole === "Admin" ? (
+                                                <select
+                                                    disabled={updating === user.id}
+                                                    value={user.departmentId || ""}
+                                                    onChange={(e) => handleUpdate(user.id, { departmentId: e.target.value })}
+                                                    className="bg-transparent text-sm font-medium text-zinc-600 dark:text-zinc-300 focus:outline-none cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                                                >
+                                                    <option value="" className="dark:bg-zinc-800">No Department</option>
+                                                    {departments.map((d: Department) => (
+                                                        <option key={d.id} value={d.id} className="dark:bg-zinc-800">{d.name}</option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <span className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
+                                                    {departments.find(d => d.id === user.departmentId)?.name || "No Department"}
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
-                                                <select
-                                                    disabled={updating === user.id}
-                                                    value={user.role}
-                                                    onChange={(e) => handleUpdate(user.id, { role: e.target.value as any })}
-                                                    className="bg-transparent text-sm font-medium text-zinc-600 dark:text-zinc-300 focus:outline-none cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-                                                >
-                                                    <option value="Admin" className="dark:bg-zinc-800">Admin</option>
-                                                    <option value="Manager" className="dark:bg-zinc-800">Manager</option>
-                                                    <option value="Employee" className="dark:bg-zinc-800">Employee</option>
-                                                </select>
+                                                {currentUserRole === "Admin" ? (
+                                                    <select
+                                                        disabled={updating === user.id}
+                                                        value={user.role}
+                                                        onChange={(e) => handleUpdate(user.id, { role: e.target.value as any })}
+                                                        className="bg-transparent text-sm font-medium text-zinc-600 dark:text-zinc-300 focus:outline-none cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                                                    >
+                                                        <option value="Admin" className="dark:bg-zinc-800">Admin</option>
+                                                        <option value="Manager" className="dark:bg-zinc-800">Manager</option>
+                                                        <option value="Employee" className="dark:bg-zinc-800">Employee</option>
+                                                    </select>
+                                                ) : (
+                                                    <span className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
+                                                        {user.role}
+                                                    </span>
+                                                )}
                                                 {updating === user.id && <Loader2 className="h-3 w-3 animate-spin text-zinc-400" />}
                                             </div>
                                         </td>
@@ -266,27 +291,29 @@ function TeamDirectory() {
                                                 <Badge variant="zinc" icon={UserCircle}>Standard</Badge>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-1">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => openEditModal(user)}
-                                                    disabled={!!updating}
-                                                >
-                                                    <Edit2 className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="danger"
-                                                    size="icon"
-                                                    className="bg-transparent hover:bg-red-50"
-                                                    onClick={() => handleDelete(user.id)}
-                                                    disabled={!!updating}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </td>
+                                        {currentUserRole === "Admin" && (
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => openEditModal(user)}
+                                                        disabled={!!updating}
+                                                    >
+                                                        <Edit2 className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="danger"
+                                                        size="icon"
+                                                        className="bg-transparent hover:bg-red-50"
+                                                        onClick={() => handleDelete(user.id)}
+                                                        disabled={!!updating}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </td>
+                                        )}
                                     </tr>
                                 ))}
                             </tbody>

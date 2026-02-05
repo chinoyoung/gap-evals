@@ -68,7 +68,7 @@ export default function DashboardLayout({
         ...(role === "Manager" ? [{
             label: "Management",
             items: [
-                { name: "My Team", href: "/dashboard/my-team", icon: Users },
+                { name: "My Team", href: "/dashboard/team", icon: Users },
             ]
         }] : []),
         {
