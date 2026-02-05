@@ -39,6 +39,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Avatar } from "@/components/ui/Avatar";
 
 interface Assignment {
     id: string;
@@ -56,6 +57,7 @@ export default function EvaluationsPage() {
     const { user } = useAuth();
     const [assignments, setAssignments] = useState<Assignment[]>([]);
     const [loading, setLoading] = useState(true);
+    const [users, setUsers] = useState<any[]>([]);
 
     useEffect(() => {
         if (user) {
@@ -84,6 +86,9 @@ export default function EvaluationsPage() {
                     ...doc.data()
                 } as Assignment)));
             }
+
+            const usersSnap = await getDocs(collection(db, "users"));
+            setUsers(usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
             setAssignments(allAssignments.sort((a, b) => {
                 const timeA = a.createdAt?.toMillis?.() || 0;
@@ -128,9 +133,21 @@ export default function EvaluationsPage() {
                                         {a.status === 'completed' ? <CheckCircle2 className="h-7 w-7" /> : <Clock className="h-7 w-7" />}
                                     </div>
                                     <div className="min-w-0">
-                                        <h4 className="text-lg font-bold text-zinc-900 dark:text-zinc-50 truncate">
-                                            Evaluation for {a.evaluateeName}
-                                        </h4>
+                                        <div className="flex items-center gap-4">
+                                            <Avatar
+                                                src={users.find(u => u.id === a.evaluateeId)?.photoURL}
+                                                name={a.evaluateeName}
+                                                size="md"
+                                            />
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between">
+                                                    <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                                                        {a.evaluateeName}
+                                                    </h3>
+                                                </div>
+                                                <p className="text-sm text-zinc-500">{a.periodName}</p>
+                                            </div>
+                                        </div>
                                         <div className="mt-2 flex flex-wrap items-center gap-4 text-xs font-semibold text-zinc-500">
                                             <Badge variant="zinc">
                                                 {a.periodName || "Active Period"}

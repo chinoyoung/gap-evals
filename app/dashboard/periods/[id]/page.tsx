@@ -43,12 +43,13 @@ import {
     Square
 } from "lucide-react";
 import Link from "next/link";
+import { useToast } from "@/components/ui/Toast";
+import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { Avatar } from "@/components/ui/Avatar";
 
 // Reuse components from old questions page if possible, but keep local for simplicity for now
 import { QuestionItem, Question } from "@/components/ui/QuestionItem";
-import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
-import { useToast } from "@/components/ui/Toast";
 import { useQuestions } from "@/hooks/useQuestions";
 import { Skeleton, SkeletonCard, SkeletonQuestionItem } from "@/components/ui/Skeleton";
 import { PeriodQuestions } from "./components/PeriodQuestions";
@@ -57,6 +58,7 @@ interface User {
     uid: string;
     displayName: string;
     email: string;
+    photoURL?: string;
     departmentId?: string;
     department?: string;
 }
@@ -212,6 +214,24 @@ export default function PeriodDetailPage() {
         }
     };
 
+    const handleUnpublish = async () => {
+        if (!confirm("Unpublishing will hide this period from employees and set it back to draft. Any existing evaluations will remain saved. Continue?")) return;
+        setIsSaving(true);
+        try {
+            await updateDoc(doc(db, "periods", id as string), {
+                status: 'draft',
+                updatedAt: Timestamp.now()
+            });
+            setPeriod({ ...period, status: 'draft' });
+            success("Period unpublished. It is now back in draft.");
+        } catch (err) {
+            console.error("Error unpublishing:", err);
+            toastError("Failed to unpublish period.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const onAddQuestion = async (text: string, type: "scale" | "paragraph", scope: "all" | "self") => {
         try {
             await addDoc(collection(db, `periods/${id}/questions`), {
@@ -296,7 +316,7 @@ export default function PeriodDetailPage() {
     };
 
     const handleBulkSubmit = async () => {
-        if (bulkReviewees.size === 0 || (bulkType !== "Self" && bulkReviewers.size === 0)) return;
+        if (bulkReviewers.size === 0 || (bulkType !== "Self" && bulkReviewees.size === 0)) return;
         setIsGenerating(true);
         try {
             const batch = writeBatch(db);
@@ -460,7 +480,7 @@ export default function PeriodDetailPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {period.status === 'draft' && (
+                    {period.status === 'draft' ? (
                         <button
                             onClick={handlePublish}
                             disabled={isSaving}
@@ -468,6 +488,15 @@ export default function PeriodDetailPage() {
                         >
                             <Send className="h-4 w-4" />
                             Publish Period
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleUnpublish}
+                            disabled={isSaving}
+                            className="flex cursor-pointer items-center gap-2 rounded-xl bg-amber-600 px-6 py-2.5 text-sm font-bold text-white transition-all hover:bg-amber-700 disabled:opacity-50"
+                        >
+                            <RotateCcw className="h-4 w-4" />
+                            Unpublish Period
                         </button>
                     )}
                     <button
@@ -731,10 +760,24 @@ export default function PeriodDetailPage() {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.evaluatorName}</div>
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar
+                                                            src={users.find(u => u.uid === a.evaluatorId)?.photoURL}
+                                                            name={a.evaluatorName}
+                                                            size="sm"
+                                                        />
+                                                        <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.evaluatorName}</div>
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.evaluateeName}</div>
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar
+                                                            src={users.find(u => u.uid === a.evaluateeId)?.photoURL}
+                                                            name={a.evaluateeName}
+                                                            size="sm"
+                                                        />
+                                                        <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.evaluateeName}</div>
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className="text-xs font-medium text-zinc-500">{a.type}</span>
@@ -792,7 +835,7 @@ export default function PeriodDetailPage() {
                     </div>
                 )}
             >
-                <div className="space-y-3">
+                <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                     {globalQuestions.map((q) => {
                         const isSelected = selectedGlobalIds.has(q.id);
                         const isAlreadyInPeriod = questions.some(pq => pq.text === q.text);
@@ -919,9 +962,7 @@ export default function PeriodDetailPage() {
                                         className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${isSelected ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-lg" : "hover:bg-zinc-50 dark:hover:bg-zinc-800"}`}
                                     >
                                         <div className="flex items-center gap-3">
-                                            <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-[10px] ${isSelected ? "bg-white/20" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"}`}>
-                                                {u.displayName.charAt(0)}
-                                            </div>
+                                            <Avatar src={u.photoURL} name={u.displayName} size="sm" />
                                             <div>
                                                 <p className="text-[11px] font-bold">{u.displayName}</p>
                                                 <p className={`text-[9px] ${isSelected ? "text-zinc-400" : "text-zinc-500"}`}>{u.department || "No Dept"}</p>
@@ -942,7 +983,10 @@ export default function PeriodDetailPage() {
                                 {["Peer to Peer", "Manager to Employee", "Employee to Manager", "Self"].map(t => (
                                     <button
                                         key={t}
-                                        onClick={() => setBulkType(t as any)}
+                                        onClick={() => {
+                                            setBulkType(t as any);
+                                            if (t === "Self") setBulkReviewees(new Set());
+                                        }}
                                         className={`py-2.5 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-widest border transition-all ${bulkType === t ? "bg-zinc-900 text-white border-zinc-900 shadow-md dark:bg-zinc-100 dark:text-zinc-950" : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-400 dark:bg-zinc-900 dark:border-zinc-800"}`}
                                     >
                                         {t}
@@ -976,9 +1020,7 @@ export default function PeriodDetailPage() {
                                                 className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${isSelected ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-lg" : "hover:bg-zinc-50 dark:hover:bg-zinc-800"}`}
                                             >
                                                 <div className="flex items-center gap-3">
-                                                    <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-[10px] ${isSelected ? "bg-white/20" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"}`}>
-                                                        {u.displayName.charAt(0)}
-                                                    </div>
+                                                    <Avatar src={u.photoURL} name={u.displayName} size="sm" />
                                                     <p className="text-[11px] font-bold">{u.displayName}</p>
                                                 </div>
                                                 {isSelected && <CheckCircle2 className="h-4 w-4" />}

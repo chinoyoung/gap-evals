@@ -68,7 +68,7 @@ export function Modal({
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         className={cn(
-                            "relative flex flex-col w-full overflow-hidden rounded-[2.5rem] bg-white shadow-2xl dark:bg-zinc-900",
+                            "relative flex flex-col w-full max-h-[90vh] overflow-hidden rounded-[2.5rem] bg-white shadow-2xl dark:bg-zinc-900",
                             maxWidthClasses[maxWidth],
                             className
                         )}

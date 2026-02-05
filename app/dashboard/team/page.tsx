@@ -39,6 +39,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { ItemActions } from "@/components/ui/ItemActions";
+import { Avatar } from "@/components/ui/Avatar";
 
 interface UserProfile {
     id: string;
@@ -217,13 +218,7 @@ function TeamDirectory() {
                                     <tr key={user.id} className="group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full ring-2 ring-zinc-100 dark:ring-zinc-800">
-                                                    <img
-                                                        src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || user.email}&background=18181b&color=fff`}
-                                                        className="h-full w-full object-cover"
-                                                        alt=""
-                                                    />
-                                                </div>
+                                                <Avatar src={user.photoURL} name={user.displayName} />
                                                 <div className="flex flex-col min-w-0">
                                                     <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">
                                                         {user.displayName || "Anonymous User"}

@@ -22,6 +22,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { Avatar } from "@/components/ui/Avatar";
 
 export default function DashboardLayout({
     children,
@@ -47,20 +48,36 @@ export default function DashboardLayout({
         );
     }
 
-    const navItems = [
-        { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
-        ...(role === "Admin" ? [
-            { name: "Evaluation Periods", href: "/dashboard/periods", icon: CalendarDays },
-            { name: "Questions Library", href: "/dashboard/questions", icon: FileText },
-            { name: "Departments", href: "/dashboard/departments", icon: Building2 },
-            { name: "Users", href: "/dashboard/team", icon: Users },
-            { name: "Results", href: "/dashboard/results", icon: BarChart3 },
-        ] : []),
-        ...(role === "Manager" ? [
-            { name: "My Team", href: "/dashboard/my-team", icon: Users },
-        ] : []),
-        { name: "My Evaluations", href: "/dashboard/evaluations", icon: UserCircle },
-        { name: "My Results", href: "/dashboard/results/my-results", icon: BarChart3 },
+    const navGroups = [
+        {
+            label: "Main",
+            items: [
+                { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
+            ]
+        },
+        ...(role === "Admin" ? [{
+            label: "Administration",
+            items: [
+                { name: "Evaluation Periods", href: "/dashboard/periods", icon: CalendarDays },
+                { name: "Questions Library", href: "/dashboard/questions", icon: FileText },
+                { name: "Departments", href: "/dashboard/departments", icon: Building2 },
+                { name: "Team Members", href: "/dashboard/team", icon: Users },
+                { name: "All Results", href: "/dashboard/results", icon: BarChart3 },
+            ]
+        }] : []),
+        ...(role === "Manager" ? [{
+            label: "Management",
+            items: [
+                { name: "My Team", href: "/dashboard/my-team", icon: Users },
+            ]
+        }] : []),
+        {
+            label: "Personal Workspace",
+            items: [
+                { name: "My Evaluations", href: "/dashboard/evaluations", icon: UserCircle },
+                { name: "My Results", href: "/dashboard/results/my-results", icon: BarChart3 },
+            ]
+        }
     ];
 
     return (
@@ -75,39 +92,44 @@ export default function DashboardLayout({
                     <ThemeToggle />
                 </div>
 
-                <nav className="flex-1 space-y-1 overflow-y-auto pr-2 custom-scrollbar">
-                    {navItems.map((item) => {
-                        const isActive = pathname === item.href;
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={cn(
-                                    "group flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition-all",
-                                    isActive
-                                        ? "bg-zinc-900 text-white shadow-xl shadow-zinc-900/10 dark:bg-white dark:text-zinc-900"
-                                        : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
-                                )}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <item.icon className={cn("h-5 w-5 transition-colors", isActive ? "text-white dark:text-zinc-900" : "text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-50")} />
-                                    {item.name}
-                                </div>
-                                {isActive && <ChevronRight className="h-4 w-4" />}
-                            </Link>
-                        );
-                    })}
+                <nav className={cn("flex-1 overflow-y-auto pr-2 custom-scrollbar", role === "Admin" ? "space-y-8" : "space-y-1")}>
+                    {navGroups.map((group) => (
+                        <div key={group.label} className={cn("space-y-2", role !== "Admin" && "space-y-1")}>
+                            {role === "Admin" && (
+                                <h3 className="px-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400/25">
+                                    {group.label}
+                                </h3>
+                            )}
+                            <div className="space-y-1">
+                                {group.items.map((item) => {
+                                    const isActive = pathname === item.href;
+                                    return (
+                                        <Link
+                                            key={item.href}
+                                            href={item.href}
+                                            className={cn(
+                                                "group flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition-all",
+                                                isActive
+                                                    ? "bg-zinc-900 text-white shadow-xl shadow-zinc-900/10 dark:bg-white dark:text-zinc-900"
+                                                    : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
+                                            )}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <item.icon className={cn("h-5 w-5 transition-colors", isActive ? "text-white dark:text-zinc-900" : "text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-50")} />
+                                                {item.name}
+                                            </div>
+                                            {isActive && <ChevronRight className="h-4 w-4" />}
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
                 </nav>
 
                 <div className="mt-auto pt-6">
                     <div className="flex items-center gap-4 px-3 py-4 rounded-3xl bg-zinc-50 dark:bg-zinc-800/50 mb-6 group cursor-default">
-                        <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full ring-2 ring-zinc-200 dark:ring-zinc-700 transition-all group-hover:ring-zinc-400">
-                            <img
-                                src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}&background=18181b&color=fff`}
-                                className="h-full w-full object-cover"
-                                alt={user.displayName || ""}
-                            />
-                        </div>
+                        <Avatar src={user.photoURL || undefined} name={user.displayName || undefined} />
                         <div className="flex flex-col overflow-hidden">
                             <span className="truncate text-sm font-bold text-zinc-800 dark:text-zinc-100">
                                 {user.displayName}
@@ -152,22 +174,33 @@ export default function DashboardLayout({
                         exit={{ opacity: 0, y: -10 }}
                         className="fixed inset-0 z-40 lg:hidden bg-white dark:bg-zinc-950 pt-24 p-6"
                     >
-                        <nav className="space-y-2">
-                            {navItems.map((item) => (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                    className={cn(
-                                        "flex items-center gap-4 rounded-2xl px-5 py-5 text-lg font-bold transition-all",
-                                        pathname === item.href
-                                            ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-                                            : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                        <nav className={cn("overflow-y-auto max-h-[70vh] pr-2 custom-scrollbar", role === "Admin" ? "space-y-6" : "space-y-1")}>
+                            {navGroups.map((group) => (
+                                <div key={group.label} className={cn("space-y-3", role !== "Admin" && "space-y-1")}>
+                                    {role === "Admin" && (
+                                        <h3 className="px-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
+                                            {group.label}
+                                        </h3>
                                     )}
-                                >
-                                    <item.icon className="h-6 w-6" />
-                                    {item.name}
-                                </Link>
+                                    <div className="space-y-1">
+                                        {group.items.map((item) => (
+                                            <Link
+                                                key={item.href}
+                                                href={item.href}
+                                                onClick={() => setIsMobileMenuOpen(false)}
+                                                className={cn(
+                                                    "flex items-center gap-4 rounded-2xl px-5 py-3.5 text-lg font-bold transition-all",
+                                                    pathname === item.href
+                                                        ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                                                        : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                                                )}
+                                            >
+                                                <item.icon className="h-6 w-6" />
+                                                {item.name}
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
                             ))}
                             <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-zinc-800">
                                 <button

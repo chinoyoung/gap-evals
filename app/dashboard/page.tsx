@@ -26,10 +26,12 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Avatar } from "@/components/ui/Avatar";
 
 interface Assignment {
     id: string;
     periodId: string;
+    evaluateeId: string;
     evaluateeName: string;
     type: string;
     status: "pending" | "completed";
@@ -44,6 +46,7 @@ export default function DashboardOverview() {
     ]);
     const [activeAssignments, setActiveAssignments] = useState<Assignment[]>([]);
     const [loading, setLoading] = useState(true);
+    const [users, setUsers] = useState<any[]>([]);
 
     useEffect(() => {
         if (user) {
@@ -102,6 +105,9 @@ export default function DashboardOverview() {
                     { label: "Total Assignments", value: String(totalAssignments), icon: ClipboardList, color: "text-indigo-500", bg: "bg-indigo-50" }
                 );
             }
+
+            const usersSnap = await getDocs(collection(db, "users"));
+            setUsers(usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
             setStats(newStats);
             setActiveAssignments(assignments);
@@ -175,9 +181,11 @@ export default function DashboardOverview() {
                             >
                                 <Card className="p-5 flex items-center justify-between hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
                                     <div className="flex items-center gap-4">
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                                            <UserCircle className="h-6 w-6" />
-                                        </div>
+                                        <Avatar
+                                            src={users.find(u => u.id === item.evaluateeId)?.photoURL}
+                                            name={item.evaluateeName}
+                                            size="md"
+                                        />
                                         <div>
                                             <h4 className="font-bold text-zinc-900 dark:text-zinc-50">{item.evaluateeName}</h4>
                                             <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-wider">

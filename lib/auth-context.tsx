@@ -49,15 +49,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 setUser(user);
 
                 // Fetch role from Firestore
-                const userDoc = await getDoc(doc(db, "users", user.uid));
+                const userDocRef = doc(db, "users", user.uid);
+                const userDoc = await getDoc(userDocRef);
+
                 if (userDoc.exists()) {
-                    setRole(userDoc.data().role);
+                    const data = userDoc.data();
+                    setRole(data.role);
+
+                    // Update photoURL if it doesn't exist or is different
+                    if (!data.photoURL || data.photoURL !== user.photoURL) {
+                        await setDoc(userDocRef, {
+                            photoURL: user.photoURL,
+                            displayName: user.displayName || data.displayName
+                        }, { merge: true });
+                    }
                 } else {
                     // Default role for new users
                     const defaultRole = "Employee";
-                    await setDoc(doc(db, "users", user.uid), {
+                    await setDoc(userDocRef, {
                         email: user.email,
                         displayName: user.displayName,
+                        photoURL: user.photoURL,
                         role: defaultRole,
                         createdAt: new Date().toISOString(),
                     });
