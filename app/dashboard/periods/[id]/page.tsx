@@ -40,7 +40,9 @@ import {
     RotateCcw,
     X,
     CheckSquare,
-    Square
+    Square,
+    ChevronDown,
+    ChevronRight
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/ui/Toast";
@@ -118,6 +120,43 @@ export default function PeriodDetailPage() {
 
     // Assignment Selection State
     const [assignmentSelection, setAssignmentSelection] = useState<Set<string>>(new Set());
+    const [expandedEvaluators, setExpandedEvaluators] = useState<Set<string>>(new Set());
+
+    // Clean up bulk wizard selections if they become invalid due to existing assignments
+    useEffect(() => {
+        if (!showBulkModal) return;
+
+        if (bulkType === "Self") {
+            setBulkReviewers(prev => {
+                const next = new Set(prev);
+                let changed = false;
+                prev.forEach(uid => {
+                    if (assignments.some(a => a.evaluatorId === uid && a.evaluateeId === uid && a.type === "Self")) {
+                        next.delete(uid);
+                        changed = true;
+                    }
+                });
+                return changed ? next : prev;
+            });
+            setBulkReviewees(new Set());
+        } else if (bulkReviewers.size > 0) {
+            setBulkReviewees(prev => {
+                const next = new Set(prev);
+                let changed = false;
+                prev.forEach(uid => {
+                    const isInvalid = Array.from(bulkReviewers).some(revId =>
+                        assignments.some(a => a.evaluatorId === revId && a.evaluateeId === uid && a.type === bulkType)
+                    );
+                    const isSelf = bulkReviewers.has(uid);
+                    if (isInvalid || isSelf) {
+                        next.delete(uid);
+                        changed = true;
+                    }
+                });
+                return changed ? next : prev;
+            });
+        }
+    }, [bulkType, bulkReviewers, assignments, showBulkModal]);
 
     useEffect(() => {
         if (id) {
@@ -646,6 +685,25 @@ export default function PeriodDetailPage() {
                                     </button>
                                 )}
                             </div>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => {
+                                        const evaluators = Array.from(new Set(assignments.map(a => a.evaluatorId)));
+                                        setExpandedEvaluators(new Set(evaluators));
+                                    }}
+                                    className="text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                                >
+                                    Expand All
+                                </button>
+                                <span className="text-zinc-200 dark:text-zinc-800">|</span>
+                                <button
+                                    onClick={() => setExpandedEvaluators(new Set())}
+                                    className="text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                                >
+                                    Collapse All
+                                </button>
+                            </div>
                         </div>
 
                         {isAddingAssignment && (
@@ -661,7 +719,12 @@ export default function PeriodDetailPage() {
                                                 className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-800"
                                             >
                                                 <option value="">Select User...</option>
-                                                {users.map(u => <option key={u.uid} value={u.uid}>{u.displayName}</option>)}
+                                                {users.filter(u => {
+                                                    if (assignType !== "Self" && selectedEvaluatee) {
+                                                        return u.uid !== selectedEvaluatee;
+                                                    }
+                                                    return true;
+                                                }).map(u => <option key={u.uid} value={u.uid}>{u.displayName}</option>)}
                                             </select>
                                         </div>
                                         {assignType !== "Self" && (
@@ -674,7 +737,7 @@ export default function PeriodDetailPage() {
                                                     className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-800"
                                                 >
                                                     <option value="">Select User...</option>
-                                                    {users.map(u => <option key={u.uid} value={u.uid}>{u.displayName}</option>)}
+                                                    {users.filter(u => u.uid !== selectedEvaluator).map(u => <option key={u.uid} value={u.uid}>{u.displayName}</option>)}
                                                 </select>
                                             </div>
                                         )}
@@ -712,91 +775,133 @@ export default function PeriodDetailPage() {
                                     <p className="text-zinc-500">No assignments created for this period.</p>
                                 </div>
                             ) : (
-                                <table className="w-full text-left min-w-[600px]">
-                                    <thead>
-                                        <tr className="border-b border-zinc-100 bg-zinc-50/50 text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:border-zinc-800 dark:bg-zinc-950/20">
-                                            <th className="px-6 py-4 w-10">
-                                                <button
+                                <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                                    {Object.entries(
+                                        assignments.reduce((acc, a) => {
+                                            if (!acc[a.evaluatorId]) acc[a.evaluatorId] = { name: a.evaluatorName, items: [] };
+                                            acc[a.evaluatorId].items.push(a);
+                                            return acc;
+                                        }, {} as Record<string, { name: string, items: Assignment[] }>)
+                                    ).map(([evalId, group]) => {
+                                        const isExpanded = expandedEvaluators.has(evalId);
+                                        const groupSelected = group.items.every(a => assignmentSelection.has(a.id));
+                                        const someSelected = group.items.some(a => assignmentSelection.has(a.id));
+
+                                        return (
+                                            <div key={evalId} className="flex flex-col">
+                                                <div
                                                     onClick={() => {
-                                                        if (assignmentSelection.size === assignments.length) {
-                                                            setAssignmentSelection(new Set());
-                                                        } else {
-                                                            setAssignmentSelection(new Set(assignments.map(a => a.id)));
-                                                        }
+                                                        const next = new Set(expandedEvaluators);
+                                                        if (isExpanded) next.delete(evalId); else next.add(evalId);
+                                                        setExpandedEvaluators(next);
                                                     }}
-                                                    className="text-zinc-300 hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
+                                                    className="group flex items-center justify-between bg-zinc-50/50 px-6 py-4 hover:bg-zinc-50 dark:bg-zinc-950/20 dark:hover:bg-zinc-950/40 cursor-pointer transition-colors"
                                                 >
-                                                    {assignmentSelection.size === assignments.length && assignments.length > 0 ? (
-                                                        <CheckSquare className="h-5 w-5 text-zinc-900 dark:text-zinc-50" />
-                                                    ) : (
-                                                        <Square className="h-5 w-5" />
+                                                    <div className="flex items-center gap-4">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const next = new Set(assignmentSelection);
+                                                                if (groupSelected) {
+                                                                    group.items.forEach(a => next.delete(a.id));
+                                                                } else {
+                                                                    group.items.forEach(a => next.add(a.id));
+                                                                }
+                                                                setAssignmentSelection(next);
+                                                            }}
+                                                            className="text-zinc-300 hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
+                                                        >
+                                                            {groupSelected ? (
+                                                                <CheckSquare className="h-5 w-5 text-zinc-900 dark:text-zinc-50" />
+                                                            ) : someSelected ? (
+                                                                <div className="h-5 w-5 rounded border-2 border-zinc-400 bg-zinc-400 flex items-center justify-center">
+                                                                    <div className="h-0.5 w-3 bg-white" />
+                                                                </div>
+                                                            ) : (
+                                                                <Square className="h-5 w-5" />
+                                                            )}
+                                                        </button>
+                                                        <div className="flex items-center gap-3">
+                                                            <Avatar
+                                                                src={users.find(u => u.uid === evalId)?.photoURL}
+                                                                name={group.name}
+                                                                size="sm"
+                                                            />
+                                                            <div>
+                                                                <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{group.name}</h4>
+                                                                <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">{group.items.length} Reviewees</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        {isExpanded ? <ChevronDown className="h-5 w-5 text-zinc-400" /> : <ChevronRight className="h-5 w-5 text-zinc-400" />}
+                                                    </div>
+                                                </div>
+
+                                                <AnimatePresence>
+                                                    {isExpanded && (
+                                                        <motion.div
+                                                            initial={{ height: 0, opacity: 0 }}
+                                                            animate={{ height: "auto", opacity: 1 }}
+                                                            exit={{ height: 0, opacity: 0 }}
+                                                            className="overflow-hidden bg-white dark:bg-zinc-900"
+                                                        >
+                                                            <table className="w-full text-left border-t border-zinc-100 dark:border-zinc-800">
+                                                                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                                                                    {group.items.map((a) => (
+                                                                        <tr
+                                                                            key={a.id}
+                                                                            onClick={() => {
+                                                                                const next = new Set(assignmentSelection);
+                                                                                if (next.has(a.id)) next.delete(a.id); else next.add(a.id);
+                                                                                setAssignmentSelection(next);
+                                                                            }}
+                                                                            className={`group hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer ${assignmentSelection.has(a.id) ? "bg-zinc-50 dark:bg-zinc-800/50" : ""}`}
+                                                                        >
+                                                                            <td className="px-6 py-4 w-10">
+                                                                                <div className="text-zinc-300 hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors pl-8">
+                                                                                    {assignmentSelection.has(a.id) ? (
+                                                                                        <CheckSquare className="h-5 w-5 text-zinc-900 dark:text-zinc-50" />
+                                                                                    ) : (
+                                                                                        <Square className="h-5 w-5" />
+                                                                                    )}
+                                                                                </div>
+                                                                            </td>
+                                                                            <td className="px-6 py-4">
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <Avatar
+                                                                                        src={users.find(u => u.uid === a.evaluateeId)?.photoURL}
+                                                                                        name={a.evaluateeName}
+                                                                                        size="sm"
+                                                                                    />
+                                                                                    <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.evaluateeName}</div>
+                                                                                </div>
+                                                                            </td>
+                                                                            <td className="px-6 py-4">
+                                                                                <span className="text-xs font-medium text-zinc-500">{a.type}</span>
+                                                                            </td>
+                                                                            <td className="px-6 py-4 text-right">
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        handleDeleteAssignment(a.id);
+                                                                                    }}
+                                                                                    className="rounded-lg p-2 text-zinc-400 opacity-100 transition-opacity hover:bg-red-50 hover:text-red-600 cursor-point"
+                                                                                >
+                                                                                    <Trash2 className="h-4 w-4" />
+                                                                                </button>
+                                                                            </td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </motion.div>
                                                     )}
-                                                </button>
-                                            </th>
-                                            <th className="px-6 py-4">Evaluator</th>
-                                            <th className="px-6 py-4">Evaluatee</th>
-                                            <th className="px-6 py-4">Relationship</th>
-                                            <th className="px-6 py-4 text-right">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                                        {assignments.map((a) => (
-                                            <tr
-                                                key={a.id}
-                                                onClick={() => {
-                                                    const next = new Set(assignmentSelection);
-                                                    if (next.has(a.id)) next.delete(a.id); else next.add(a.id);
-                                                    setAssignmentSelection(next);
-                                                }}
-                                                className={`group hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer ${assignmentSelection.has(a.id) ? "bg-zinc-50 dark:bg-zinc-800/50" : ""}`}
-                                            >
-                                                <td className="px-6 py-4">
-                                                    <div className="text-zinc-300 hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors">
-                                                        {assignmentSelection.has(a.id) ? (
-                                                            <CheckSquare className="h-5 w-5 text-zinc-900 dark:text-zinc-50" />
-                                                        ) : (
-                                                            <Square className="h-5 w-5" />
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <Avatar
-                                                            src={users.find(u => u.uid === a.evaluatorId)?.photoURL}
-                                                            name={a.evaluatorName}
-                                                            size="sm"
-                                                        />
-                                                        <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.evaluatorName}</div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <Avatar
-                                                            src={users.find(u => u.uid === a.evaluateeId)?.photoURL}
-                                                            name={a.evaluateeName}
-                                                            size="sm"
-                                                        />
-                                                        <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.evaluateeName}</div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="text-xs font-medium text-zinc-500">{a.type}</span>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDeleteAssignment(a.id);
-                                                        }}
-                                                        className="rounded-lg p-2 text-zinc-400 opacity-100 sm:opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 cursor-pointer"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                                </AnimatePresence>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             )}
                         </div>
                     </motion.div>
@@ -949,7 +1054,13 @@ export default function PeriodDetailPage() {
                             {users.filter(u =>
                                 (bulkDept === "All" || u.department === bulkDept) &&
                                 (u.displayName.toLowerCase().includes(bulkSearch.toLowerCase()))
-                            ).map(u => {
+                            ).filter(u => {
+                                // If bulk type is Self, hide users who already have a self assignment
+                                if (bulkType === "Self") {
+                                    return !assignments.some(a => a.evaluatorId === u.uid && a.evaluateeId === u.uid && a.type === "Self");
+                                }
+                                return true;
+                            }).map(u => {
                                 const isSelected = bulkReviewers.has(u.uid);
                                 return (
                                     <div
@@ -1007,7 +1118,20 @@ export default function PeriodDetailPage() {
                                     </button>
                                 </div>
                                 <div className="space-y-1">
-                                    {users.map(u => {
+                                    {users.filter(u => {
+                                        // Hide reviewees who are already being evaluated by ANY of the selected reviewers
+                                        if (bulkReviewers.size > 0) {
+                                            // 1. Check if they already have an assignment
+                                            const alreadyAssigned = Array.from(bulkReviewers).some(revId =>
+                                                assignments.some(a => a.evaluatorId === revId && a.evaluateeId === u.uid && a.type === bulkType)
+                                            );
+                                            if (alreadyAssigned) return false;
+
+                                            // 2. Hide themselves if they are one of the selected reviewers
+                                            if (bulkReviewers.has(u.uid)) return false;
+                                        }
+                                        return true;
+                                    }).map(u => {
                                         const isSelected = bulkReviewees.has(u.uid);
                                         return (
                                             <div

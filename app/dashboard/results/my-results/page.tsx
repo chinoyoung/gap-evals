@@ -407,20 +407,6 @@ export default function MyResultsPage() {
                                                 </div>
                                             </div>
                                         )}
-
-                                        <div className="rounded-3xl bg-zinc-900 p-8 text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-xl shadow-zinc-900/10">
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center dark:bg-zinc-900/10 shrink-0">
-                                                    <Star className="h-6 w-6 text-amber-500 fill-amber-500" />
-                                                </div>
-                                                <div>
-                                                    <p className="text-base font-bold tracking-tight">Confidential & Anonymous Insights</p>
-                                                    <p className="mt-1 text-sm text-zinc-400 dark:text-zinc-500 leading-relaxed">
-                                                        These results have been aggregated and processed to ensure the total privacy of your team members.
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
                                     </div>
                                 </motion.div>
                             )}

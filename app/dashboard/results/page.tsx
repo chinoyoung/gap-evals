@@ -8,7 +8,9 @@ import {
     getDocs,
     query,
     orderBy,
-    where
+    where,
+    doc,
+    deleteDoc
 } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -27,7 +29,8 @@ import {
     CheckSquare,
     Square,
     RotateCcw,
-    Share2
+    Share2,
+    Trash2
 } from "lucide-react";
 
 interface Evaluation {
@@ -45,13 +48,6 @@ interface Evaluation {
     periodName?: string;
 }
 
-interface Question {
-    id: string;
-    text: string;
-    type: "scale" | "paragraph";
-    order?: number;
-}
-
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -61,6 +57,8 @@ import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
+import { Modal } from "@/components/ui/Modal";
+import { useToast } from "@/components/ui/Toast";
 
 interface Evaluation {
     id: string;
@@ -96,6 +94,9 @@ export default function ResultsPage() {
     const [selection, setSelection] = useState<Set<string>>(new Set());
     const [users, setUsers] = useState<any[]>([]);
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const { success: toastSuccess, error: toastError } = useToast();
 
     const filteredEvaluations = evaluations.filter(ev =>
         (ev.evaluateeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -179,6 +180,23 @@ export default function ResultsPage() {
             console.error("Error fetching results", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!selectedId) return;
+        setIsDeleting(true);
+        try {
+            await deleteDoc(doc(db, "evaluations", selectedId));
+            toastSuccess("Evaluation result deleted successfully");
+            setEvaluations(prev => prev.filter(e => e.id !== selectedId));
+            setSelectedId(null);
+            setShowDeleteConfirm(false);
+        } catch (error) {
+            console.error("Error deleting evaluation:", error);
+            toastError("Failed to delete evaluation result");
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -388,9 +406,19 @@ export default function ResultsPage() {
                                         </p>
                                     </div>
                                 </div>
-                                <Button variant="ghost" size="icon" onClick={() => setSelectedId(null)}>
-                                    <X className="h-6 w-6" />
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="danger"
+                                        size="icon"
+                                        className="h-10 w-10 shrink-0"
+                                        onClick={() => setShowDeleteConfirm(true)}
+                                    >
+                                        <Trash2 className="h-5 w-5" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => setSelectedId(null)}>
+                                        <X className="h-6 w-6" />
+                                    </Button>
+                                </div>
                             </header>
 
                             <div className="flex-1 overflow-y-auto p-6 sm:p-8">
@@ -444,6 +472,36 @@ export default function ResultsPage() {
                     </div>
                 )}
             </AnimatePresence>
+            <Modal
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                title="Confirm Deletion"
+                description="Are you sure you want to delete this evaluation result? This action cannot be undone."
+                footer={(
+                    <div className="flex justify-end gap-3 w-full">
+                        <Button variant="ghost" onClick={() => setShowDeleteConfirm(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="danger"
+                            loading={isDeleting}
+                            onClick={handleDelete}
+                        >
+                            Delete Permanently
+                        </Button>
+                    </div>
+                )}
+            >
+                <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-900/20">
+                    <div className="flex gap-3">
+                        <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                        <div className="text-sm text-red-700 dark:text-red-400">
+                            <p className="font-bold mb-1">Warning: Irreversible Action</p>
+                            <p>Deleting this record will permanently remove all associated feedback scores and comments. The evaluatee will no longer be able to see this result if it was published.</p>
+                        </div>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 }
