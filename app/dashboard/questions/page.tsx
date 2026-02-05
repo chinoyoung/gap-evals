@@ -96,7 +96,10 @@ function SortablePresetItem({ q, onRemove }: { q: Question; onRemove: () => void
                 <button className="cursor-grab active:cursor-grabbing text-zinc-300 hover:text-zinc-600" {...attributes} {...listeners}>
                     <GripVertical className="h-4 w-4" />
                 </button>
-                <div className="min-w-0">
+                <div className="min-w-0 flex items-center gap-2">
+                    <span className={`flex items-center justify-center h-5 w-5 rounded text-[10px] font-bold ${q.type === 'scale' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'}`}>
+                        {q.type === 'scale' ? <Hash className="h-3 w-3" /> : <Type className="h-3 w-3" />}
+                    </span>
                     <p className="text-xs font-medium truncate">{q.text}</p>
                 </div>
             </div>
@@ -154,7 +157,6 @@ export default function QuestionsPage() {
     const [isAdding, setIsAdding] = useState(false);
     const [newText, setNewText] = useState("");
     const [newType, setNewType] = useState<"scale" | "paragraph">("scale");
-    const [newScope, setNewScope] = useState<"all" | "self">("all");
     const [editingId, setEditingId] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [typeFilter, setTypeFilter] = useState<"all" | "scale" | "paragraph">("all");
@@ -199,14 +201,12 @@ export default function QuestionsPage() {
                 await updateDoc(doc(db, "questions", editingId), {
                     text: newText,
                     type: newType,
-                    scope: newScope,
                 });
                 success("Question updated successfully.");
             } else {
                 await addDoc(collection(db, "questions"), {
                     text: newText,
                     type: newType,
-                    scope: newScope,
                     order: questions.length,
                     createdAt: Timestamp.now(),
                 });
@@ -248,7 +248,6 @@ export default function QuestionsPage() {
     const startEditing = (question: Question) => {
         setNewText(question.text);
         setNewType(question.type);
-        setNewScope(question.scope || "all");
         setEditingId(question.id);
         setIsAdding(true);
     };
@@ -256,7 +255,6 @@ export default function QuestionsPage() {
     const resetForm = () => {
         setNewText("");
         setNewType("scale");
-        setNewScope("all");
         setEditingId(null);
         setIsAdding(false);
     };
@@ -598,22 +596,6 @@ export default function QuestionsPage() {
                                 ))}
                             </div>
                         </div>
-
-                        <div className="flex items-center gap-3 pt-6">
-                            <div
-                                onClick={() => setNewScope(newScope === "self" ? "all" : "self")}
-                                className={`h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-all cursor-pointer ${newScope === "self"
-                                    ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:border-zinc-100 dark:text-zinc-950"
-                                    : "border-zinc-200 hover:border-zinc-400 dark:border-zinc-700"
-                                    }`}
-                            >
-                                {newScope === "self" && <Check className="h-4 w-4" strokeWidth={3} />}
-                            </div>
-                            <div className="cursor-pointer select-none" onClick={() => setNewScope(newScope === "self" ? "all" : "self")}>
-                                <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50 leading-tight">Self-Evaluation Only</p>
-                                <p className="text-[11px] text-zinc-500">Only visible for self-reflections.</p>
-                            </div>
-                        </div>
                     </div>
                 </form>
             </Modal>
@@ -679,9 +661,11 @@ export default function QuestionsPage() {
                                                 {isSelected && <Check className="h-3 w-3" />}
                                             </div>
                                             <div>
-                                                <p className="text-xs font-medium line-clamp-2 text-left">{q.text}</p>
-                                                <div className="flex gap-1 mt-1">
-                                                    <Badge variant="zinc" className="text-[9px] py-0 px-1">{q.type}</Badge>
+                                                <div className="flex items-start gap-2">
+                                                    <span className={`mt-0.5 flex items-center justify-center h-4 w-4 flex-shrink-0 rounded text-[10px] font-bold ${q.type === 'scale' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'}`}>
+                                                        {q.type === 'scale' ? <Hash className="h-2.5 w-2.5" /> : <Type className="h-2.5 w-2.5" />}
+                                                    </span>
+                                                    <p className="text-xs font-medium line-clamp-2 text-left">{q.text}</p>
                                                 </div>
                                             </div>
                                         </div>
