@@ -14,39 +14,43 @@ import { auth, db } from "./firebase";
 interface AuthContextType {
     user: User | null;
     loading: boolean;
+    error: string | null;
     role: "Admin" | "Manager" | "Employee" | null;
     signIn: () => Promise<void>;
     logOut: () => Promise<void>;
+    clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
     user: null,
     loading: true,
+    error: null,
     role: null,
     signIn: async () => { },
     logOut: async () => { },
+    clearError: () => { },
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [role, setRole] = useState<"Admin" | "Manager" | "Employee" | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
-                /*
                 if (!user.email?.endsWith("@goabroad.com")) {
                     await signOut(auth);
                     setUser(null);
                     setRole(null);
+                    setError("Access denied");
                     setLoading(false);
-                    alert("Only @goabroad.com users are allowed.");
                     return;
                 }
-                */
 
                 setUser(user);
+                setError(null);
 
                 // Fetch role from Firestore
                 const userDocRef = doc(db, "users", user.uid);
@@ -87,10 +91,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const signIn = async () => {
         const provider = new GoogleAuthProvider();
+        setError(null);
         try {
             await signInWithPopup(auth, provider);
-        } catch (error) {
-            console.error("Error signing in", error);
+        } catch (err: any) {
+            console.error("Error signing in", err);
+            if (err.code !== 'auth/popup-closed-by-user') {
+                setError("Authentication failed");
+            }
         }
     };
 
@@ -102,8 +110,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
+    const clearError = () => setError(null);
+
     return (
-        <AuthContext.Provider value={{ user, loading, role, signIn, logOut }}>
+        <AuthContext.Provider value={{ user, loading, error, role, signIn, logOut, clearError }}>
             {children}
         </AuthContext.Provider>
     );

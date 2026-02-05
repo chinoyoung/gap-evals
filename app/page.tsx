@@ -3,13 +3,17 @@
 import { useAuth } from "@/lib/auth-context";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { LogIn, ShieldCheck } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { LogIn, ShieldCheck, AlertCircle } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export default function LoginPage() {
-  const { user, loading, signIn } = useAuth();
+  const { user, loading, error, signIn, clearError } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    clearError();
+  }, []);
 
   useEffect(() => {
     if (!loading && user) {
@@ -47,6 +51,22 @@ export default function LoginPage() {
             Secure access for GoAbroad.com team members
           </p>
         </div>
+
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="flex items-center gap-3 rounded-xl bg-red-50 p-4 text-sm font-medium text-red-600 dark:bg-red-950/20 dark:text-red-400">
+                <AlertCircle className="h-5 w-5 shrink-0" />
+                {error}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="mt-10">
           <button

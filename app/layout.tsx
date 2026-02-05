@@ -19,6 +19,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "GAP Evaluator",
   description: "Internal evaluation tool for GoAbroad.com",
+  robots: "noindex, nofollow",
 };
 
 export default function RootLayout({
