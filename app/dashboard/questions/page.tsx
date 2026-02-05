@@ -26,7 +26,12 @@ import {
     Check,
     AlertCircle,
     GripVertical,
-    Filter
+    Filter,
+    Layers,
+    List,
+    MoreHorizontal,
+    CheckSquare,
+    Square
 } from "lucide-react";
 
 // Dnd Kit Imports
@@ -115,6 +120,15 @@ export default function QuestionsPage() {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [typeFilter, setTypeFilter] = useState<"all" | "scale" | "paragraph">("all");
+
+    // Presets State
+    const [activeTab, setActiveTab] = useState<"questions" | "presets">("questions");
+    const [presets, setPresets] = useState<any[]>([]);
+    const [isAddingPreset, setIsAddingPreset] = useState(false);
+    const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
+    const [presetName, setPresetName] = useState("");
+    const [presetDesc, setPresetDesc] = useState("");
+    const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(new Set());
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -206,6 +220,80 @@ export default function QuestionsPage() {
         }
     };
 
+    useEffect(() => {
+        if (activeTab === "presets") {
+            fetchPresets();
+        }
+    }, [activeTab]);
+
+    const fetchPresets = async () => {
+        try {
+            const snap = await getDocs(query(collection(db, "question_presets"), orderBy("createdAt", "desc")));
+            setPresets(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handlePresetSubmit = async () => {
+        if (!presetName.trim()) return;
+        setSubmitting(true);
+        try {
+            const data = {
+                name: presetName,
+                description: presetDesc,
+                questions: Array.from(selectedQuestionIds),
+                updatedAt: Timestamp.now()
+            };
+
+            if (editingPresetId) {
+                await updateDoc(doc(db, "question_presets", editingPresetId), data);
+                success("Preset updated.");
+            } else {
+                await addDoc(collection(db, "question_presets"), {
+                    ...data,
+                    createdAt: Timestamp.now()
+                });
+                success("Preset created.");
+            }
+            setIsAddingPreset(false);
+            resetPresetForm();
+            fetchPresets();
+        } catch (err) {
+            console.error(err);
+            toastError("Failed to save preset.");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleDeletePreset = async (id: string) => {
+        if (!confirm("Delete this preset?")) return;
+        try {
+            await deleteDoc(doc(db, "question_presets", id));
+            success("Preset deleted.");
+            fetchPresets();
+        } catch (err) {
+            toastError("Failed to delete preset.");
+        }
+    };
+
+    const resetPresetForm = () => {
+        setPresetName("");
+        setPresetDesc("");
+        setSelectedQuestionIds(new Set());
+        setEditingPresetId(null);
+        setIsAddingPreset(false);
+    };
+
+    const openEditPreset = (p: any) => {
+        setPresetName(p.name);
+        setPresetDesc(p.description || "");
+        setSelectedQuestionIds(new Set(p.questions || []));
+        setEditingPresetId(p.id);
+        setIsAddingPreset(true);
+    };
+
     const filteredQuestions = questions.filter(q =>
         typeFilter === "all" ? true : q.type === typeFilter
     );
@@ -221,16 +309,154 @@ export default function QuestionsPage() {
     }
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 pb-20">
             <PageHeader
                 title="Questions Library"
-                description="Manage template questions that can be imported into evaluation periods."
+                description="Manage questions and create re-usable presets for assignments."
             >
-                <Button onClick={() => { resetForm(); setIsAdding(true); }} icon={Plus}>
-                    Add Question
+                <div className="flex bg-zinc-100 p-1 rounded-xl dark:bg-zinc-800">
+                    <button
+                        onClick={() => setActiveTab("questions")}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "questions" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400"}`}
+                    >
+                        <List className="h-4 w-4" />
+                        Questions
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("presets")}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "presets" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400"}`}
+                    >
+                        <Layers className="h-4 w-4" />
+                        Presets
+                    </button>
+                </div>
+                <Button onClick={() => {
+                    if (activeTab === "questions") {
+                        resetForm();
+                        setIsAdding(true);
+                    } else {
+                        resetPresetForm();
+                        setIsAddingPreset(true);
+                    }
+                }} icon={Plus}>
+                    Add {activeTab === "questions" ? "Question" : "Preset"}
                 </Button>
             </PageHeader>
 
+            {activeTab === "questions" ? (
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Filter className="h-4 w-4 text-zinc-400" />
+                            <span className="text-sm font-medium text-zinc-500">Filters:</span>
+                        </div>
+                        <div className="flex items-center gap-2 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900">
+                            {(['all', 'scale', 'paragraph'] as const).map((filter) => (
+                                <button
+                                    key={filter}
+                                    onClick={() => setTypeFilter(filter)}
+                                    className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all capitalize cursor-pointer ${typeFilter === filter
+                                        ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
+                                        : "text-zinc-500 hover:text-zinc-200 dark:text-zinc-400"
+                                        }`}
+                                >
+                                    {filter}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <Card className="overflow-hidden">
+                        {loading ? (
+                            <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                                <SkeletonQuestionItem />
+                                <SkeletonQuestionItem />
+                                <SkeletonQuestionItem />
+                                <SkeletonQuestionItem />
+                            </div>
+                        ) : filteredQuestions.length === 0 ? (
+                            <EmptyState
+                                className="border-none py-20"
+                                icon={Filter}
+                                title="No questions found"
+                                description="No questions found matching this filter."
+                            />
+                        ) : (
+                            <DndContext
+                                sensors={sensors}
+                                collisionDetection={closestCenter}
+                                onDragEnd={handleDragEnd}
+                                modifiers={[restrictToVerticalAxis]}
+                            >
+                                <SortableContext
+                                    items={filteredQuestions.map((q) => q.id)}
+                                    strategy={verticalListSortingStrategy}
+                                >
+                                    <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                                        {filteredQuestions.map((q) => (
+                                            <SortableQuestionItem
+                                                key={q.id}
+                                                q={q}
+                                                onEdit={startEditing}
+                                                onDelete={handleDelete}
+                                            />
+                                        ))}
+                                    </div>
+                                </SortableContext>
+                            </DndContext>
+                        )}
+                    </Card>
+                </div>
+            ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                    {presets.length === 0 ? (
+                        <div className="col-span-full">
+                            <EmptyState
+                                className="py-20"
+                                icon={Layers}
+                                title="No presets defined"
+                                description="Create a preset to group questions for easy assignment."
+                            />
+                        </div>
+                    ) : presets.map(p => (
+                        <Card key={p.id} className="p-6 relative group">
+                            <div className="space-y-4">
+                                <div>
+                                    <h3 className="font-bold text-lg">{p.name}</h3>
+                                    <p className="text-sm text-zinc-500">{p.description || "No description."}</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Questions Included</h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {p.questions?.slice(0, 3).map((qid: string) => {
+                                            const q = questions.find(qu => qu.id === qid);
+                                            return q ? (
+                                                <Badge key={qid} variant="zinc">{q.text.substring(0, 20)}...</Badge>
+                                            ) : null;
+                                        })}
+                                        {(p.questions?.length || 0) > 3 && (
+                                            <Badge variant="zinc">+{p.questions.length - 3} more</Badge>
+                                        )}
+                                        {(!p.questions || p.questions.length === 0) && (
+                                            <span className="text-xs text-zinc-400 italic">No questions selected.</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="absolute top-4 right-4 flex gap-2">
+                                <button onClick={() => openEditPreset(p)} className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100">
+                                    <Edit2 className="h-4 w-4" />
+                                </button>
+                                <button onClick={() => handleDeletePreset(p.id)} className="p-2 hover:bg-red-50 rounded-lg text-zinc-400 hover:text-red-600 dark:hover:bg-red-900/20">
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+            )}
+
+            {/* Questions Modal */}
             <Modal
                 isOpen={isAdding}
                 onClose={resetForm}
@@ -296,69 +522,71 @@ export default function QuestionsPage() {
                 </form>
             </Modal>
 
-            <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Filter className="h-4 w-4 text-zinc-400" />
-                        <span className="text-sm font-medium text-zinc-500">Filters:</span>
+            {/* Preset Modal */}
+            <Modal
+                isOpen={isAddingPreset}
+                onClose={resetPresetForm}
+                title={editingPresetId ? "Edit Preset" : "New Preset"}
+                description="Group questions together for quick assignment."
+                maxWidth="2xl"
+                footer={(
+                    <div className="flex justify-between w-full items-center">
+                        <p className="text-sm text-zinc-500">{selectedQuestionIds.size} questions selected</p>
+                        <div className="flex gap-3">
+                            <Button variant="ghost" type="button" onClick={resetPresetForm}>
+                                Cancel
+                            </Button>
+                            <Button onClick={handlePresetSubmit} loading={submitting} disabled={!presetName.trim() || selectedQuestionIds.size === 0}>
+                                {editingPresetId ? "Update Preset" : "Save Preset"}
+                            </Button>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900">
-                        {(['all', 'scale', 'paragraph'] as const).map((filter) => (
-                            <button
-                                key={filter}
-                                onClick={() => setTypeFilter(filter)}
-                                className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all capitalize cursor-pointer ${typeFilter === filter
-                                    ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
-                                    : "text-zinc-500 hover:text-zinc-200 dark:text-zinc-400"
-                                    }`}
-                            >
-                                {filter}
-                            </button>
-                        ))}
+                )}
+            >
+                <div className="space-y-6">
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Preset Name</label>
+                            <Input value={presetName} onChange={e => setPresetName(e.target.value)} placeholder="e.g. Developer Review" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Description</label>
+                            <Input value={presetDesc} onChange={e => setPresetDesc(e.target.value)} placeholder="Optional description..." />
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <label className="text-sm font-medium">Select Questions</label>
+                        <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                            {questions.map(q => {
+                                const selected = selectedQuestionIds.has(q.id);
+                                return (
+                                    <div
+                                        key={q.id}
+                                        onClick={() => {
+                                            const next = new Set(selectedQuestionIds);
+                                            if (selected) next.delete(q.id); else next.add(q.id);
+                                            setSelectedQuestionIds(next);
+                                        }}
+                                        className={`p-3 rounded-xl border flex gap-3 cursor-pointer transition-all ${selected ? "border-zinc-900 bg-zinc-50 dark:border-zinc-100 dark:bg-zinc-800" : "border-zinc-100 dark:border-zinc-800 hover:border-zinc-300"}`}
+                                    >
+                                        <div className={`h-5 w-5 rounded border flex items-center justify-center flex-shrink-0 ${selected ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:border-zinc-100 dark:text-zinc-950" : "border-zinc-300 dark:border-zinc-600"}`}>
+                                            {selected && <Check className="h-3 w-3" />}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium">{q.text}</p>
+                                            <div className="flex gap-2 mt-1">
+                                                <Badge variant="zinc" className="text-[10px] py-0">{q.type}</Badge>
+                                                {q.scope === "self" && <Badge variant="blue" className="text-[10px] py-0">Self Only</Badge>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
-
-                <Card className="overflow-hidden">
-                    {loading ? (
-                        <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                            <SkeletonQuestionItem />
-                            <SkeletonQuestionItem />
-                            <SkeletonQuestionItem />
-                            <SkeletonQuestionItem />
-                        </div>
-                    ) : filteredQuestions.length === 0 ? (
-                        <EmptyState
-                            className="border-none py-20"
-                            icon={Filter}
-                            title="No questions found"
-                            description="No questions found matching this filter."
-                        />
-                    ) : (
-                        <DndContext
-                            sensors={sensors}
-                            collisionDetection={closestCenter}
-                            onDragEnd={handleDragEnd}
-                            modifiers={[restrictToVerticalAxis]}
-                        >
-                            <SortableContext
-                                items={filteredQuestions.map((q) => q.id)}
-                                strategy={verticalListSortingStrategy}
-                            >
-                                <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                                    {filteredQuestions.map((q) => (
-                                        <SortableQuestionItem
-                                            key={q.id}
-                                            q={q}
-                                            onEdit={startEditing}
-                                            onDelete={handleDelete}
-                                        />
-                                    ))}
-                                </div>
-                            </SortableContext>
-                        </DndContext>
-                    )}
-                </Card>
-            </div>
+            </Modal>
         </div>
     );
 }

@@ -48,6 +48,8 @@ interface Assignment {
     evaluateeName: string;
     status: string;
     type: string;
+    questions?: Question[];
+    presetId?: string;
 }
 
 export default function EvaluationForm() {
@@ -70,29 +72,57 @@ export default function EvaluationForm() {
 
     const fetchData = async () => {
         try {
-            const [assignSnap, questSnap] = await Promise.all([
-                getDoc(doc(db, `periods/${periodId}/assignments`, assignmentId as string)),
-                getDocs(query(collection(db, `periods/${periodId}/questions`), orderBy("order", "asc")))
-            ]);
+            // 1. Fetch Assignment
+            const assignSnap = await getDoc(doc(db, `periods/${periodId}/assignments`, assignmentId as string));
 
-            let assignmentType = "Peer";
-            if (assignSnap.exists()) {
-                const data = assignSnap.data();
-                if (data.status === 'completed') {
-                    router.push('/dashboard/evaluations');
-                    return;
+            if (!assignSnap.exists()) {
+                console.error("Assignment not found");
+                return;
+            }
+
+            const data = assignSnap.data();
+            const assignmentData = { id: assignSnap.id, ...data } as Assignment & { questions?: Question[], presetId?: string };
+
+            if (data.status === 'completed') {
+                router.push('/dashboard/evaluations');
+                return;
+            }
+            setAssignment(assignmentData);
+
+            let qs: Question[] = [];
+
+            // 2. Determine Question Source
+            if (assignmentData.questions && assignmentData.questions.length > 0) {
+                // A. Use Snapshot
+                qs = assignmentData.questions;
+            } else if (assignmentData.presetId) {
+                // B. Fetch via Preset
+                const presetSnap = await getDoc(doc(db, "question_presets", assignmentData.presetId));
+                if (presetSnap.exists()) {
+                    const presetData = presetSnap.data();
+                    if (presetData.questions && presetData.questions.length > 0) {
+                        // Fetch actual valid questions from library
+                        // Optimization: We fetch all questions. In a production app with thousands of questions, 
+                        // we would use document lookups or an 'in' query.
+                        const allQsSnap = await getDocs(collection(db, "questions"));
+                        const allQs = allQsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Question));
+
+                        // Map preset IDs to question objects, maintaining preset order
+                        qs = presetData.questions
+                            .map((id: string) => allQs.find(q => q.id === id))
+                            .filter((q: Question | undefined): q is Question => !!q);
+                    }
                 }
-                setAssignment({ id: assignSnap.id, ...data } as Assignment);
-                assignmentType = data.type;
-            }
+            } else {
+                // C. Legacy Fallback (Period Questions)
+                const questSnap = await getDocs(query(collection(db, `periods/${periodId}/questions`), orderBy("order", "asc")));
+                qs = questSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Question));
 
-            let qs = questSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Question));
-
-            // Filter questions based on assignment type
-            if (assignmentType !== "Self") {
-                qs = qs.filter(q => q.scope === "all");
+                // Apply Legacy Filtering
+                if (data.type !== "Self") {
+                    qs = qs.filter(q => q.scope === "all");
+                }
             }
-            // If it IS Self, they see both 'all' and 'self' (default)
 
             setQuestions(qs);
         } catch (error) {
