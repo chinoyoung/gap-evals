@@ -108,8 +108,9 @@ export default function EvaluationForm() {
                         const allQs = allQsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Question));
 
                         // Map preset IDs to question objects, maintaining preset order
+                        const questionMap = new Map(allQs.map(q => [q.id, q]));
                         qs = presetData.questions
-                            .map((id: string) => allQs.find(q => q.id === id))
+                            .map((id: string) => questionMap.get(id))
                             .filter((q: Question | undefined): q is Question => !!q);
                     }
                 }

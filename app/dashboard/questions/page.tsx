@@ -416,12 +416,12 @@ export default function QuestionsPage() {
 
             {activeTab === "questions" ? (
                 <div className="space-y-6">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-2">
                             <Filter className="h-4 w-4 text-zinc-400" />
                             <span className="text-sm font-medium text-zinc-500">Filters:</span>
                         </div>
-                        <div className="flex items-center gap-2 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900">
+                        <div className="flex items-center gap-2 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900 overflow-x-auto">
                             {(['all', 'scale', 'paragraph'] as const).map((filter) => (
                                 <button
                                     key={filter}
@@ -635,9 +635,9 @@ export default function QuestionsPage() {
                     </div>
 
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[500px]">
+                    <div className="flex flex-col h-auto gap-6 md:grid md:grid-cols-2 md:h-[500px]">
                         {/* Left: Available Questions (Picker) */}
-                        <div className="space-y-3 flex flex-col h-full">
+                        <div className="space-y-3 flex flex-col h-72 md:h-full">
                             <label className="text-sm font-medium">Available Questions</label>
                             <Input placeholder="Search questions..." className="mb-2" />
                             <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar border rounded-xl p-2">
@@ -675,7 +675,7 @@ export default function QuestionsPage() {
                         </div>
 
                         {/* Right: Selected Questions (Sortable) */}
-                        <div className="space-y-3 flex flex-col h-full">
+                        <div className="space-y-3 flex flex-col h-72 md:h-full">
                             <label className="text-sm font-medium">Selected Questions ({selectedQuestionIds.length})</label>
                             <p className="text-xs text-zinc-400">Drag to reorder</p>
                             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar border rounded-xl p-2 bg-zinc-50/50 dark:bg-zinc-900/50">
