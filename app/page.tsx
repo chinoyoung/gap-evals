@@ -5,7 +5,6 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { LogIn, ShieldCheck, AlertCircle } from "lucide-react";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export default function LoginPage() {
   const { user, loading, error, signIn, clearError } = useAuth();
@@ -31,9 +30,6 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 p-6 dark:bg-zinc-950">
-      <div className="fixed top-6 right-6">
-        <ThemeToggle />
-      </div>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

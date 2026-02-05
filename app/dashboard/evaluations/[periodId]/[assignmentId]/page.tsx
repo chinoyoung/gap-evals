@@ -207,7 +207,7 @@ export default function EvaluationForm() {
     }
 
     return (
-        <div className="mx-auto max-w-3xl space-y-8">
+        <div className="mx-auto max-w-7xl space-y-8">
             <Link
                 href="/dashboard/evaluations"
                 className="inline-flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"

@@ -986,7 +986,7 @@ export default function PeriodDetailPage() {
                                     }`}
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isSelected ? "bg-white/10 text-white dark:bg-black/10 dark:text-black" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
+                                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isSelected ? "bg-white/10 text-white dark:bg-zinc-800 dark:text-zinc-100" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
                                         }`}>
                                         {q.type === "scale" ? <Hash className="h-5 w-5" /> : <Type className="h-5 w-5" />}
                                     </div>

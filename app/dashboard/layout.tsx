@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Avatar } from "@/components/ui/Avatar";
 
 export default function DashboardLayout({
@@ -73,6 +72,7 @@ export default function DashboardLayout({
             items: [
                 { name: "My Evaluations", href: "/dashboard/evaluations", icon: UserCircle },
                 { name: "My Results", href: "/dashboard/results/my-results", icon: BarChart3 },
+                { name: "Account Settings", href: "/dashboard/settings", icon: Settings },
             ]
         }
     ];
@@ -86,7 +86,6 @@ export default function DashboardLayout({
                         <span className="text-xl font-black tracking-tight block">GAP Evaluator</span>
                         <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">@goabroad.com</span>
                     </div>
-                    <ThemeToggle />
                 </div>
 
                 <nav className={cn("flex-1 overflow-y-auto pr-2 custom-scrollbar", isAdmin ? "space-y-8" : "space-y-1")}>
@@ -152,7 +151,6 @@ export default function DashboardLayout({
                     <span className="font-black tracking-tight">GAP Evaluator</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <ThemeToggle />
                     <button
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                         className="p-2 h-10 w-10 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
@@ -217,8 +215,8 @@ export default function DashboardLayout({
             </AnimatePresence>
 
             {/* Main Content */}
-            <main className="flex-1 p-6 lg:p-12 pt-28 lg:pt-12 min-h-screen overflow-y-auto">
-                <div className="mx-auto max-w-5xl">
+            <main className="flex-1 p-12 lg:p-12 pt-28 lg:pt-12 min-h-screen overflow-y-auto">
+                <div className="mx-auto max-w-7xl">
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
