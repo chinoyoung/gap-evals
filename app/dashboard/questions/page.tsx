@@ -71,6 +71,41 @@ import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { useQuestions } from "@/hooks/useQuestions";
 import { SkeletonQuestionItem } from "@/components/ui/Skeleton";
+import { X } from "lucide-react";
+
+function SortablePresetItem({ q, onRemove }: { q: Question; onRemove: () => void }) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id: q.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : "auto",
+        position: "relative" as const,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} className={`bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-3 rounded-xl flex items-center justify-between group ${isDragging ? 'shadow-lg ring-1 ring-zinc-900 z-500' : ''}`}>
+            <div className="flex items-center gap-3 overflow-hidden">
+                <button className="cursor-grab active:cursor-grabbing text-zinc-300 hover:text-zinc-600" {...attributes} {...listeners}>
+                    <GripVertical className="h-4 w-4" />
+                </button>
+                <div className="min-w-0">
+                    <p className="text-xs font-medium truncate">{q.text}</p>
+                </div>
+            </div>
+            <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="text-zinc-400 hover:text-red-500 p-1">
+                <X className="h-4 w-4" />
+            </button>
+        </div>
+    );
+}
 
 function SortableQuestionItem({
     q,
@@ -131,11 +166,21 @@ export default function QuestionsPage() {
     const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
     const [presetName, setPresetName] = useState("");
     const [presetDesc, setPresetDesc] = useState("");
-    const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(new Set());
+    const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([]);
+
+    // Preset Drag State
+    const [activePresetId, setActivePresetId] = useState<string | null>(null);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 10;
+
+    const presetSensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -253,7 +298,7 @@ export default function QuestionsPage() {
             const data = {
                 name: presetName,
                 description: presetDesc,
-                questions: Array.from(selectedQuestionIds),
+                questions: selectedQuestionIds,
                 updatedAt: Timestamp.now()
             };
 
@@ -292,7 +337,7 @@ export default function QuestionsPage() {
     const resetPresetForm = () => {
         setPresetName("");
         setPresetDesc("");
-        setSelectedQuestionIds(new Set());
+        setSelectedQuestionIds([]);
         setEditingPresetId(null);
         setIsAddingPreset(false);
     };
@@ -300,9 +345,20 @@ export default function QuestionsPage() {
     const openEditPreset = (p: any) => {
         setPresetName(p.name);
         setPresetDesc(p.description || "");
-        setSelectedQuestionIds(new Set(p.questions || []));
+        setSelectedQuestionIds(p.questions || []);
         setEditingPresetId(p.id);
         setIsAddingPreset(true);
+    };
+
+    const handlePresetDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        setActivePresetId(null);
+
+        if (over && active.id !== over.id) {
+            const oldIndex = selectedQuestionIds.indexOf(active.id as string);
+            const newIndex = selectedQuestionIds.indexOf(over.id as string);
+            setSelectedQuestionIds(arrayMove(selectedQuestionIds, oldIndex, newIndex));
+        }
     };
 
     const filteredQuestions = questions.filter(q =>
@@ -568,15 +624,16 @@ export default function QuestionsPage() {
                 onClose={resetPresetForm}
                 title={editingPresetId ? "Edit Preset" : "New Preset"}
                 description="Group questions together for quick assignment."
-                maxWidth="2xl"
+                maxWidth="5xl"
+                className="max-h-[90vh] flex flex-col"
                 footer={(
                     <div className="flex justify-between w-full items-center">
-                        <p className="text-sm text-zinc-500">{selectedQuestionIds.size} questions selected</p>
+                        <p className="text-sm text-zinc-500">{selectedQuestionIds.length} questions selected</p>
                         <div className="flex gap-3">
                             <Button variant="ghost" type="button" onClick={resetPresetForm}>
                                 Cancel
                             </Button>
-                            <Button onClick={handlePresetSubmit} loading={submitting} disabled={!presetName.trim() || selectedQuestionIds.size === 0}>
+                            <Button onClick={handlePresetSubmit} loading={submitting} disabled={!presetName.trim() || selectedQuestionIds.length === 0}>
                                 {editingPresetId ? "Update Preset" : "Save Preset"}
                             </Button>
                         </div>
@@ -595,34 +652,81 @@ export default function QuestionsPage() {
                         </div>
                     </div>
 
-                    <div className="space-y-3">
-                        <label className="text-sm font-medium">Select Questions</label>
-                        <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                            {questions.map(q => {
-                                const selected = selectedQuestionIds.has(q.id);
-                                return (
-                                    <div
-                                        key={q.id}
-                                        onClick={() => {
-                                            const next = new Set(selectedQuestionIds);
-                                            if (selected) next.delete(q.id); else next.add(q.id);
-                                            setSelectedQuestionIds(next);
-                                        }}
-                                        className={`p-3 rounded-xl border flex gap-3 cursor-pointer transition-all ${selected ? "border-zinc-900 bg-zinc-50 dark:border-zinc-100 dark:bg-zinc-800" : "border-zinc-100 dark:border-zinc-800 hover:border-zinc-300"}`}
-                                    >
-                                        <div className={`h-5 w-5 rounded border flex items-center justify-center flex-shrink-0 ${selected ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:border-zinc-100 dark:text-zinc-950" : "border-zinc-300 dark:border-zinc-600"}`}>
-                                            {selected && <Check className="h-3 w-3" />}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium">{q.text}</p>
-                                            <div className="flex gap-2 mt-1">
-                                                <Badge variant="zinc" className="text-[10px] py-0">{q.type}</Badge>
-                                                {q.scope === "self" && <Badge variant="blue" className="text-[10px] py-0">Self Only</Badge>}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[500px]">
+                        {/* Left: Available Questions (Picker) */}
+                        <div className="space-y-3 flex flex-col h-full">
+                            <label className="text-sm font-medium">Available Questions</label>
+                            <Input placeholder="Search questions..." className="mb-2" />
+                            <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar border rounded-xl p-2">
+                                {questions.map(q => {
+                                    const isSelected = selectedQuestionIds.includes(q.id);
+                                    return (
+                                        <div
+                                            key={q.id}
+                                            onClick={() => {
+                                                let next = [...selectedQuestionIds];
+                                                if (isSelected) {
+                                                    next = next.filter(id => id !== q.id);
+                                                } else {
+                                                    next.push(q.id);
+                                                }
+                                                setSelectedQuestionIds(next);
+                                            }}
+                                            className={`p-3 rounded-xl border flex gap-3 cursor-pointer transition-all ${isSelected ? "opacity-50 bg-zinc-50 border-zinc-200" : "hover:border-zinc-400 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"}`}
+                                        >
+                                            <div className={`h-4 w-4 rounded-md border flex items-center justify-center flex-shrink-0 ${isSelected ? "bg-zinc-900 border-zinc-900 text-white" : "border-zinc-300"}`}>
+                                                {isSelected && <Check className="h-3 w-3" />}
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-medium line-clamp-2 text-left">{q.text}</p>
+                                                <div className="flex gap-1 mt-1">
+                                                    <Badge variant="zinc" className="text-[9px] py-0 px-1">{q.type}</Badge>
+                                                </div>
                                             </div>
                                         </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Right: Selected Questions (Sortable) */}
+                        <div className="space-y-3 flex flex-col h-full">
+                            <label className="text-sm font-medium">Selected Questions ({selectedQuestionIds.length})</label>
+                            <p className="text-xs text-zinc-400">Drag to reorder</p>
+                            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar border rounded-xl p-2 bg-zinc-50/50 dark:bg-zinc-900/50">
+                                {selectedQuestionIds.length === 0 ? (
+                                    <div className="h-full flex items-center justify-center text-zinc-400 text-sm italic">
+                                        No questions selected.
                                     </div>
-                                );
-                            })}
+                                ) : (
+                                    <DndContext
+                                        sensors={presetSensors}
+                                        collisionDetection={closestCenter}
+                                        onDragEnd={handlePresetDragEnd}
+                                        modifiers={[restrictToVerticalAxis]}
+                                    >
+                                        <SortableContext
+                                            items={selectedQuestionIds}
+                                            strategy={verticalListSortingStrategy}
+                                        >
+                                            <div className="space-y-2">
+                                                {selectedQuestionIds.map((id) => {
+                                                    const q = questions.find(q => q.id === id);
+                                                    if (!q) return null;
+                                                    return (
+                                                        <SortablePresetItem
+                                                            key={id}
+                                                            q={q}
+                                                            onRemove={() => setSelectedQuestionIds(prev => prev.filter(pid => pid !== id))}
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
+                                        </SortableContext>
+                                    </DndContext>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
