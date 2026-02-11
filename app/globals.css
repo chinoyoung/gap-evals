@@ -3,28 +3,44 @@
 @variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
+  --background: #fafaf9;
   --foreground: #27272a;
+  --surface: #ffffff;
+  --muted: #71717a;
+  --border: #e4e4e7;
+  --shadow-color: rgba(0, 0, 0, 0.04);
+  --shadow-color-md: rgba(0, 0, 0, 0.08);
 }
 
 .dark {
-  --background: #0a0a0a;
+  --background: #0f0f12;
   --foreground: #ededed;
+  --surface: rgba(24, 24, 27, 0.8);
+  --muted: #a1a1aa;
+  --border: rgba(63, 63, 70, 0.6);
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --shadow-color-md: rgba(0, 0, 0, 0.5);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
+  --color-cobalt-25: #E8F5FA;
   --color-cobalt-50: #2DA5D2;
   --color-cobalt-100: #14A3C3;
   --color-cobalt-200: #0F83B9;
   --color-cobalt-300: #0875A7;
+  --color-cobalt-400: #096E95;
   --color-cobalt-500: #0A5E85;
   --color-cobalt-600: #084B6A;
   --color-cobalt-700: #023D58;
+  --color-cobalt-800: #022D42;
 }
 
 body {
@@ -34,6 +50,34 @@ body {
   transition: font-size 0.2s ease, padding 0.2s ease;
 }
 
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(63, 63, 70, 0.5);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(82, 82, 91, 0.7);
+}
+
 /* Font Size Enhancements */
 [data-font-size="lg"] {
   font-size: 110%;
@@ -41,7 +85,6 @@ body {
 
 [data-font-size="lg"] .text-sm {
   font-size: 0.95rem;
-  /* slightly larger than default 0.875rem */
 }
 
 [data-font-size="lg"] .text-base {

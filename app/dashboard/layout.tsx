@@ -13,12 +13,10 @@ import {
     Menu,
     X,
     ShieldCheck,
-    ClipboardCheck,
     UserCircle,
     BarChart3,
     Building2,
     CalendarDays,
-    ChevronRight
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -80,23 +78,24 @@ export default function DashboardLayout({
     return (
         <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950">
             {/* Sidebar - Desktop */}
-            <aside className="hidden w-72 flex-col border-r border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 lg:flex sticky top-0 h-screen">
-                <div className="mb-10 flex items-center justify-between px-3 py-2">
+            <aside className="hidden w-72 flex-col border-r border-zinc-100 bg-white p-6 dark:border-zinc-800/50 dark:bg-zinc-950/50 lg:flex sticky top-0 h-screen">
+                <div className="mb-10 flex items-center gap-3 px-3 py-2">
+                    <div className="h-2 w-2 rounded-full bg-cobalt-500"></div>
                     <div>
                         <span className="text-xl font-black tracking-tight block">GAP Evaluator</span>
                         <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">@goabroad.com</span>
                     </div>
                 </div>
 
-                <nav className={cn("flex-1 overflow-y-auto pr-2 custom-scrollbar", isAdmin ? "space-y-8" : "space-y-1")}>
+                <nav className={cn("flex-1 overflow-y-auto pr-2 custom-scrollbar", isAdmin ? "space-y-8" : "space-y-2")}>
                     {navGroups.map((group) => (
-                        <div key={group.label} className={cn("space-y-2", !isAdmin && "space-y-1")}>
+                        <div key={group.label} className={cn("space-y-3", !isAdmin && "space-y-2")}>
                             {isAdmin && (
-                                <h3 className="px-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400/25">
+                                <h3 className="px-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400/50">
                                     {group.label}
                                 </h3>
                             )}
-                            <div className="space-y-1">
+                            <div className="space-y-1.5">
                                 {group.items.map((item) => {
                                     const isActive = pathname === item.href;
                                     return (
@@ -104,17 +103,17 @@ export default function DashboardLayout({
                                             key={item.href}
                                             href={item.href}
                                             className={cn(
-                                                "group flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition-all",
+                                                "group relative flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition-all",
                                                 isActive
-                                                    ? "bg-zinc-900 text-white shadow-xl shadow-zinc-900/10 dark:bg-white dark:text-zinc-900"
-                                                    : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
+                                                    ? "bg-cobalt-500/10 text-cobalt-500 dark:bg-cobalt-50/10 dark:text-cobalt-50"
+                                                    : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-50"
                                             )}
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <item.icon className={cn("h-5 w-5 transition-colors", isActive ? "text-white dark:text-zinc-900" : "text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-50")} />
-                                                {item.name}
-                                            </div>
-                                            {isActive && <ChevronRight className="h-4 w-4" />}
+                                            {isActive && (
+                                                <div className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-cobalt-500"></div>
+                                            )}
+                                            <item.icon className={cn("h-5 w-5 transition-colors", isActive ? "text-cobalt-500 dark:text-cobalt-50" : "text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-50")} />
+                                            {item.name}
                                         </Link>
                                     );
                                 })}
@@ -123,8 +122,8 @@ export default function DashboardLayout({
                     ))}
                 </nav>
 
-                <div className="mt-auto pt-6">
-                    <div className="flex items-center gap-4 px-3 py-4 rounded-3xl bg-zinc-50 dark:bg-zinc-800/50 mb-6 group cursor-default">
+                <div className="mt-auto pt-6 border-t border-zinc-100 dark:border-zinc-800/50">
+                    <div className="flex items-center gap-4 px-3 py-4 rounded-3xl bg-zinc-50 dark:bg-zinc-800/50 mb-6 group cursor-default mt-6">
                         <Avatar src={user.photoURL || undefined} name={user.displayName || undefined} />
                         <div className="flex flex-col overflow-hidden">
                             <span className="truncate text-sm font-bold text-zinc-800 dark:text-zinc-100">
@@ -146,14 +145,15 @@ export default function DashboardLayout({
             </aside>
 
             {/* Mobile Header */}
-            <div className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between bg-white/80 backdrop-blur-md border-b border-zinc-200 px-6 py-4 dark:bg-zinc-950/80 dark:border-zinc-800">
-                <div className="flex items-center gap-3">
+            <div className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between bg-white/90 backdrop-blur-xl border-b border-zinc-100 px-6 py-4 dark:bg-zinc-950/90 dark:border-zinc-800/50">
+                <div className="flex items-center gap-2.5">
+                    <div className="h-1.5 w-1.5 rounded-full bg-cobalt-500"></div>
                     <span className="font-black tracking-tight">GAP Evaluator</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        className="p-2 h-10 w-10 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                        className="p-2.5 h-11 w-11 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 transition-colors"
                     >
                         {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                     </button>
@@ -164,48 +164,68 @@ export default function DashboardLayout({
             <AnimatePresence>
                 {isMobileMenuOpen && (
                     <motion.div
+                        key="mobile-menu"
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
+                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
                         className="fixed inset-0 z-40 lg:hidden bg-white dark:bg-zinc-950 pt-24 p-6"
                     >
-                        <nav className={cn("overflow-y-auto max-h-[70vh] pr-2 custom-scrollbar", isAdmin ? "space-y-6" : "space-y-1")}>
-                            {navGroups.map((group) => (
-                                <div key={group.label} className={cn("space-y-3", !isAdmin && "space-y-1")}>
+                        <nav className={cn("overflow-y-auto max-h-[70vh] pr-2 custom-scrollbar", isAdmin ? "space-y-6" : "space-y-2")}>
+                            {navGroups.map((group, groupIndex) => (
+                                <motion.div
+                                    key={group.label}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: groupIndex * 0.05, type: "spring", damping: 25, stiffness: 300 }}
+                                    className={cn("space-y-3", !isAdmin && "space-y-2")}
+                                >
                                     {isAdmin && (
-                                        <h3 className="px-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
+                                        <h3 className="px-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400/50">
                                             {group.label}
                                         </h3>
                                     )}
-                                    <div className="space-y-1">
-                                        {group.items.map((item) => (
-                                            <Link
-                                                key={item.href}
-                                                href={item.href}
-                                                onClick={() => setIsMobileMenuOpen(false)}
-                                                className={cn(
-                                                    "flex items-center gap-4 rounded-2xl px-5 py-3.5 text-lg font-bold transition-all",
-                                                    pathname === item.href
-                                                        ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-                                                        : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-900"
-                                                )}
-                                            >
-                                                <item.icon className="h-6 w-6" />
-                                                {item.name}
-                                            </Link>
-                                        ))}
+                                    <div className="space-y-2">
+                                        {group.items.map((item, itemIndex) => {
+                                            const isActive = pathname === item.href;
+                                            return (
+                                                <motion.div
+                                                    key={item.href}
+                                                    initial={{ opacity: 0, x: -20 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    transition={{ delay: (groupIndex * 0.05) + (itemIndex * 0.03), type: "spring", damping: 25, stiffness: 300 }}
+                                                >
+                                                    <Link
+                                                        href={item.href}
+                                                        onClick={() => setIsMobileMenuOpen(false)}
+                                                        className={cn(
+                                                            "relative flex items-center gap-4 rounded-2xl px-5 py-3.5 text-base font-bold transition-all",
+                                                            isActive
+                                                                ? "bg-cobalt-500/10 text-cobalt-500 dark:bg-cobalt-50/10 dark:text-cobalt-50"
+                                                                : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-50"
+                                                        )}
+                                                    >
+                                                        {isActive && (
+                                                            <div className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-full bg-cobalt-500"></div>
+                                                        )}
+                                                        <item.icon className={cn("h-5 w-5", isActive ? "text-cobalt-500 dark:text-cobalt-50" : "")} />
+                                                        {item.name}
+                                                    </Link>
+                                                </motion.div>
+                                            );
+                                        })}
                                     </div>
-                                </div>
+                                </motion.div>
                             ))}
-                            <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-zinc-800">
+                            <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-zinc-800/50">
                                 <button
                                     onClick={() => {
                                         logOut();
                                         setIsMobileMenuOpen(false);
                                     }}
-                                    className="flex w-full items-center gap-4 rounded-2xl px-5 py-5 text-lg font-bold text-red-600"
+                                    className="flex w-full items-center gap-4 rounded-2xl px-5 py-4 text-base font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all"
                                 >
-                                    <LogOut className="h-6 w-6" />
+                                    <LogOut className="h-5 w-5" />
                                     Sign Out
                                 </button>
                             </div>
@@ -215,7 +235,7 @@ export default function DashboardLayout({
             </AnimatePresence>
 
             {/* Main Content */}
-            <main className="flex-1 p-12 lg:p-12 pt-28 lg:pt-12 min-h-screen overflow-y-auto">
+            <main className="flex-1 px-5 py-6 lg:px-12 lg:py-12 pt-22 lg:pt-12 min-h-screen overflow-y-auto">
                 <div className="mx-auto max-w-7xl">
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
