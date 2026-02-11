@@ -16,12 +16,13 @@ import {
     Users,
     Clock,
     CheckCircle2,
+    TrendingUp,
     ArrowRight,
-    BookOpen,
+    UserCircle,
     Calendar,
-    MessageCircle,
-    Sparkles,
-    type LucideIcon
+    ArrowUpRight,
+    BookOpen,
+    HelpCircle
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
@@ -29,16 +30,7 @@ import { Card } from "@/components/ui/Card";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Avatar } from "@/components/ui/Avatar";
-
-interface StatCard {
-    label: string;
-    value: string;
-    icon: LucideIcon;
-    color: string;
-    bgLight: string;
-    bgDark: string;
-    borderColor: string;
-}
+import { cn } from "@/lib/utils";
 
 interface Assignment {
     id: string;
@@ -52,25 +44,9 @@ interface Assignment {
 
 export default function DashboardOverview() {
     const { user, role, isAdmin } = useAuth();
-    const [stats, setStats] = useState<StatCard[]>([
-        {
-            label: "Pending Evaluations",
-            value: "0",
-            icon: Clock,
-            color: "text-amber-600 dark:text-amber-400",
-            bgLight: "bg-gradient-to-br from-amber-50 to-amber-100/50",
-            bgDark: "dark:bg-gradient-to-br dark:from-amber-500/10 dark:to-amber-500/5",
-            borderColor: "border-t-2 border-t-amber-500/20"
-        },
-        {
-            label: "Completed",
-            value: "0",
-            icon: CheckCircle2,
-            color: "text-emerald-600 dark:text-emerald-400",
-            bgLight: "bg-gradient-to-br from-emerald-50 to-emerald-100/50",
-            bgDark: "dark:bg-gradient-to-br dark:from-emerald-500/10 dark:to-emerald-500/5",
-            borderColor: "border-t-2 border-t-emerald-500/20"
-        },
+    const [stats, setStats] = useState([
+        { label: "Pending Evaluations", value: "0", icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10", trend: "+2 this week" },
+        { label: "Completed", value: "0", icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10", trend: "+12% vs last month" },
     ]);
     const [activeAssignments, setActiveAssignments] = useState<Assignment[]>([]);
     const [loading, setLoading] = useState(true);
@@ -106,7 +82,7 @@ export default function DashboardOverview() {
                     if (data.status === "pending") pendingCount++;
                     if (data.status === "completed") completedCount++;
 
-                    if (data.status === "pending" && assignments.length < 3) {
+                    if (data.status === "pending" && assignments.length < 5) {
                         assignments.push({
                             id: doc.id,
                             periodId: pid,
@@ -117,24 +93,8 @@ export default function DashboardOverview() {
             }
 
             const newStats = [
-                {
-                    label: "Pending Evaluations",
-                    value: String(pendingCount),
-                    icon: Clock,
-                    color: "text-amber-600 dark:text-amber-400",
-                    bgLight: "bg-gradient-to-br from-amber-50 to-amber-100/50",
-                    bgDark: "dark:bg-gradient-to-br dark:from-amber-500/10 dark:to-amber-500/5",
-                    borderColor: "border-t-2 border-t-amber-500/20"
-                },
-                {
-                    label: "Completed",
-                    value: String(completedCount),
-                    icon: CheckCircle2,
-                    color: "text-emerald-600 dark:text-emerald-400",
-                    bgLight: "bg-gradient-to-br from-emerald-50 to-emerald-100/50",
-                    bgDark: "dark:bg-gradient-to-br dark:from-emerald-500/10 dark:to-emerald-500/5",
-                    borderColor: "border-t-2 border-t-emerald-500/20"
-                },
+                { label: "Pending Evaluations", value: String(pendingCount), icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10", trend: "Action Required" },
+                { label: "Completed", value: String(completedCount), icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10", trend: "Great job!" },
             ];
 
             if (isAdmin) {
@@ -145,24 +105,8 @@ export default function DashboardOverview() {
                 }
 
                 newStats.push(
-                    {
-                        label: "Total Team Members",
-                        value: String(usersCount.data().count),
-                        icon: Users,
-                        color: "text-cobalt-500 dark:text-cobalt-200",
-                        bgLight: "bg-gradient-to-br from-cobalt-50/30 to-cobalt-100/20",
-                        bgDark: "dark:bg-gradient-to-br dark:from-cobalt-500/10 dark:to-cobalt-500/5",
-                        borderColor: "border-t-2 border-t-cobalt-500/20"
-                    },
-                    {
-                        label: "Total Assignments",
-                        value: String(totalAssignments),
-                        icon: ClipboardList,
-                        color: "text-indigo-600 dark:text-indigo-400",
-                        bgLight: "bg-gradient-to-br from-indigo-50 to-indigo-100/50",
-                        bgDark: "dark:bg-gradient-to-br dark:from-indigo-500/10 dark:to-indigo-500/5",
-                        borderColor: "border-t-2 border-t-indigo-500/20"
-                    }
+                    { label: "Total Assignments", value: String(totalAssignments), icon: ClipboardList, color: "text-cobalt-500", bg: "bg-cobalt-500/10", trend: "System wide" },
+                    { label: "Team Members", value: String(usersCount.data().count), icon: Users, color: "text-violet-500", bg: "bg-violet-500/10", trend: "Active users" }
                 );
             }
 
@@ -182,171 +126,188 @@ export default function DashboardOverview() {
         return <Loading className="py-20" />;
     }
 
-    const currentDate = new Date().toLocaleDateString('en-US', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric'
-    });
+    const container = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1
+            }
+        }
+    };
+
+    const item = {
+        hidden: { opacity: 0, y: 20 },
+        show: { opacity: 1, y: 0 }
+    };
 
     return (
-        <div className="space-y-12">
-            <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="relative"
-            >
-                <div className="absolute -top-6 left-0 h-1 w-32 bg-gradient-to-r from-cobalt-500 to-cobalt-300 rounded-full" />
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <Calendar className="h-5 w-5 text-zinc-400" />
-                            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                                {currentDate}
-                            </p>
-                        </div>
-                        <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
-                            Welcome back, {user?.displayName?.split(' ')[0]}
-                        </h1>
-                        <p className="mt-2 text-zinc-600 dark:text-zinc-400 flex items-center gap-2">
-                            <Sparkles className="h-4 w-4" />
-                            Here's what's happening with your evaluations today.
-                        </p>
-                    </div>
+        <motion.div
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className="space-y-8"
+        >
+            {/* Hero Section */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                        Good afternoon, {user?.displayName?.split(' ')[0]}
+                    </h1>
+                    <p className="mt-2 text-zinc-500 dark:text-zinc-400 font-medium">
+                        Here's what's happening in your workspace today.
+                    </p>
                 </div>
-            </motion.div>
+                <div className="flex items-center gap-2 text-sm font-medium text-zinc-500 bg-white dark:bg-zinc-900 px-4 py-2 rounded-full shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-800">
+                    <Calendar className="h-4 w-4" />
+                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </div>
+            </div>
 
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {stats.map((stat, i) => (
-                    <motion.div
-                        key={stat.label}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 + (i * 0.1) }}
-                    >
-                        <Card className={`p-6 group cursor-default overflow-hidden relative ${stat.bgLight} ${stat.bgDark} ${stat.borderColor}`}>
-                            <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${stat.color} bg-white/80 dark:bg-zinc-900/50 backdrop-blur-sm shadow-sm`}>
-                                <stat.icon className="h-7 w-7" />
+                    <motion.div key={stat.label} variants={item}>
+                        <Card className="p-6 relative overflow-hidden group h-full">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className={cn("p-3 rounded-2xl transition-colors", stat.bg, stat.color)}>
+                                    <stat.icon className="h-6 w-6" />
+                                </div>
+                                <span className={cn(
+                                    "text-xs font-bold px-2 py-1 rounded-full",
+                                    stat.label.includes("Pending") ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                                )}>
+                                    {stat.trend}
+                                </span>
                             </div>
                             <div>
-                                <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-400 tracking-wide">{stat.label}</p>
-                                <h3 className="mt-2 text-3xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">{stat.value}</h3>
+                                <h3 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
+                                    {stat.value}
+                                </h3>
+                                <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-1">
+                                    {stat.label}
+                                </p>
                             </div>
                         </Card>
                     </motion.div>
                 ))}
             </div>
 
-            <div className="grid gap-12 lg:grid-cols-3">
-                <section className="lg:col-span-2 space-y-6">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                {/* Active Assignments - Table Style */}
+                <motion.div variants={item} className="xl:col-span-2 space-y-4">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">Active Assignments</h2>
-                        <Link href="/dashboard/evaluations" className="text-sm font-semibold text-cobalt-600 hover:text-cobalt-700 transition-colors dark:text-cobalt-300 dark:hover:text-cobalt-200 flex items-center gap-1.5 group">
-                            View all
-                            <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                        <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">Active Assignments</h2>
+                        <Link href="/dashboard/evaluations" className="text-sm font-bold text-cobalt-600 hover:text-cobalt-700 transition-colors flex items-center gap-1">
+                            View all <ArrowRight className="h-4 w-4" />
                         </Link>
                     </div>
 
-                    <div className="space-y-3">
+                    <Card className="overflow-hidden border-0 ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
                         {activeAssignments.length === 0 ? (
                             <EmptyState
-                                className="py-20"
+                                className="py-12"
                                 icon={ClipboardList}
-                                title="No active assignments"
-                                description="You have no pending evaluations at the moment."
+                                title="All caught up!"
+                                description="You have no pending evaluations."
                             />
-                        ) : activeAssignments.map((item, i) => (
-                            <motion.div
-                                key={item.id}
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.4 + (i * 0.08) }}
-                            >
-                                <Card className="p-5 flex items-center justify-between hover:border-cobalt-300 hover:shadow-lg hover:shadow-cobalt-500/5 dark:hover:border-cobalt-700 transition-all hover:-translate-y-0.5 group">
-                                    <div className="flex items-center gap-4 flex-1">
-                                        <Avatar
-                                            src={users.find(u => u.id === item.evaluateeId)?.photoURL}
-                                            name={item.evaluateeName}
-                                            size="md"
-                                        />
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-3">
-                                                <h4 className="font-bold text-zinc-900 dark:text-zinc-50">{item.evaluateeName}</h4>
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 text-xs font-semibold">
-                                                    <Clock className="h-3 w-3" />
-                                                    Pending
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold uppercase tracking-wider mt-1">
-                                                {item.type.replace(/-/g, " ")} Evaluation
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <Link
-                                        href={`/dashboard/evaluations/${item.periodId}/${item.id}`}
-                                        className="flex h-11 w-11 items-center justify-center rounded-xl bg-cobalt-600 text-white transition-all hover:bg-cobalt-700 hover:scale-105 active:scale-95 shadow-md shadow-cobalt-600/20 group-hover:shadow-lg group-hover:shadow-cobalt-600/30 dark:bg-cobalt-500 dark:hover:bg-cobalt-600"
-                                    >
-                                        <ArrowRight className="h-5 w-5" />
-                                    </Link>
-                                </Card>
-                            </motion.div>
-                        ))}
-                    </div>
-                </section>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-zinc-50 dark:bg-zinc-950/50 border-b border-zinc-100 dark:border-zinc-800">
+                                        <tr>
+                                            <th className="px-6 py-4 font-bold text-zinc-500 uppercase tracking-wider text-[10px]">Evaluatee</th>
+                                            <th className="px-6 py-4 font-bold text-zinc-500 uppercase tracking-wider text-[10px]">Type</th>
+                                            <th className="px-6 py-4 font-bold text-zinc-500 uppercase tracking-wider text-[10px]">Status</th>
+                                            <th className="px-6 py-4 font-bold text-zinc-500 uppercase tracking-wider text-[10px] text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
+                                        {activeAssignments.map((assignment) => (
+                                            <tr key={assignment.id} className="group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-colors">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar
+                                                            src={users.find(u => u.id === assignment.evaluateeId)?.photoURL}
+                                                            name={assignment.evaluateeName}
+                                                            size="sm"
+                                                        />
+                                                        <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                                                            {assignment.evaluateeName}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300 capitalize">
+                                                        {assignment.type.replace(/-/g, " ")}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                                        Pending
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <Link href={`/dashboard/evaluations/${assignment.periodId}/${assignment.id}`}>
+                                                        <Button size="sm" variant="secondary" className="font-bold text-xs h-8">
+                                                            Evalute
+                                                        </Button>
+                                                    </Link>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Card>
+                </motion.div>
 
-                <section className="space-y-6">
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.5 }}
-                    >
-                        <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight mb-6">Resources</h2>
-                        <Card className="relative overflow-hidden bg-gradient-to-br from-cobalt-600 to-cobalt-700 p-8 text-white border-none shadow-2xl shadow-cobalt-600/20 dark:shadow-cobalt-600/40">
-                            <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -mr-24 -mt-24" />
-                            <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full -ml-16 -mb-16" />
-                            <div className="relative z-10">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm">
+                {/* Resources and Quick Links */}
+                <div className="space-y-6">
+                    <motion.div variants={item}>
+                        <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">Resources</h2>
+                        <div className="grid gap-4">
+                            <Card variant="glass" className="p-5 group hover:border-cobalt-200 dark:hover:border-cobalt-900 transition-colors" hoverable>
+                                <Link href="/dashboard/guide" className="flex items-start gap-4">
+                                    <div className="p-3 rounded-xl bg-cobalt-50 text-cobalt-600 dark:bg-cobalt-900/20 dark:text-cobalt-400 group-hover:bg-cobalt-500 group-hover:text-white transition-colors">
                                         <BookOpen className="h-6 w-6" />
                                     </div>
-                                    <h3 className="text-2xl font-bold tracking-tight">Evaluation Guide</h3>
-                                </div>
-                                <p className="text-cobalt-100 leading-relaxed">
-                                    Learn how to provide constructive feedback that helps our team grow and succeed together.
-                                </p>
-                                <Link href="/dashboard/guide" className="block mt-8">
-                                    <Button
-                                        variant="secondary"
-                                        className="w-full font-bold bg-white text-cobalt-700 hover:bg-cobalt-25 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
-                                    >
-                                        Read Guide
-                                    </Button>
+                                    <div>
+                                        <h3 className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2 group-hover:text-cobalt-600 dark:group-hover:text-cobalt-400 transition-colors">
+                                            Evaluation Guide
+                                            <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </h3>
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                                            Best practices for giving constructive feedback to your team.
+                                        </p>
+                                    </div>
                                 </Link>
-                            </div>
-                        </Card>
+                            </Card>
+
+                            <Card variant="glass" className="p-5 group hover:border-violet-200 dark:hover:border-violet-900 transition-colors" hoverable>
+                                <Link href="#" className="flex items-start gap-4">
+                                    <div className="p-3 rounded-xl bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-400 group-hover:bg-violet-500 group-hover:text-white transition-colors">
+                                        <HelpCircle className="h-6 w-6" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+                                            Support Center
+                                            <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </h3>
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                                            Need help with the platform? Contact HR or view FAQs.
+                                        </p>
+                                    </div>
+                                </Link>
+                            </Card>
+                        </div>
                     </motion.div>
 
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.6 }}
-                    >
-                        <Card className="p-6 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-900 dark:to-zinc-900/50">
-                            <div className="flex items-start gap-4">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cobalt-25 text-cobalt-600 dark:bg-cobalt-500/10 dark:text-cobalt-400">
-                                    <MessageCircle className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-zinc-900 dark:text-zinc-50">Need Help?</h3>
-                                    <p className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                                        Contact the HR department for any questions regarding the evaluation process.
-                                    </p>
-                                </div>
-                            </div>
-                        </Card>
-                    </motion.div>
-                </section>
+                    {/* Quick Profile Snapshot if needed, or remove to keep clean */}
+                </div>
             </div>
-        </div>
+        </motion.div>
     );
 }
