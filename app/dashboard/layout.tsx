@@ -83,7 +83,7 @@ export default function DashboardLayout({
         <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950">
             {/* Floating Sidebar - Desktop */}
             <aside className="hidden w-72 flex-col p-4 lg:flex sticky top-0 h-screen">
-                <div className="flex h-full flex-col rounded-lg bg-zinc-900 dark:bg-zinc-950 text-white shadow-2xl shadow-zinc-900/20 overflow-hidden relative">
+                <div className="flex h-full flex-col rounded-lg bg-sidebar text-sidebar-foreground shadow-2xl shadow-zinc-900/20 overflow-hidden relative">
                     {/* Background Texture for Sidebar */}
                     <div className="absolute inset-0 opacity-10 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay pointer-events-none"></div>
 
@@ -115,7 +115,7 @@ export default function DashboardLayout({
                                                 key={item.href}
                                                 href={item.href}
                                                 className={cn(
-                                                    "group flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all relative overflow-hidden",
+                                                    "group flex items-center justify-between gap-3 rounded-r-lg px-4 py-3 text-sm font-medium transition-all relative overflow-hidden",
                                                     isActive
                                                         ? "text-white bg-white/10"
                                                         : "text-zinc-400 hover:text-white hover:bg-white/5"
@@ -124,7 +124,7 @@ export default function DashboardLayout({
                                                 {isActive && (
                                                     <motion.div
                                                         layoutId="activeNavIndicator"
-                                                        className="absolute left-0 top-0 bottom-0 w-1 bg-cobalt-500 rounded-r-full"
+                                                        className="absolute left-0 top-0 bottom-0 w-1 bg-cobalt-500"
                                                         initial={{ opacity: 0 }}
                                                         animate={{ opacity: 1 }}
                                                         exit={{ opacity: 0 }}
@@ -153,7 +153,7 @@ export default function DashboardLayout({
                         </div>
                         <button
                             onClick={() => logOut()}
-                            className="flex w-full items-center justify-center gap-2 rounded-lg py-3 text-xs font-bold text-red-400 hover:bg-red-500/10 transition-colors"
+                            className="flex w-full items-center bg-red-500/20 justify-center gap-2 rounded-lg py-3 text-xs font-bold text-red-400 hover:bg-red-500/30 transition-colors"
                         >
                             <LogOut className="h-3.5 w-3.5" />
                             Sign Out

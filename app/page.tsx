@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { LogIn, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
-import { Logo } from "@/components/ui/Logo";
+
 
 export default function LoginPage() {
   const { user, loading, error, signIn, clearError } = useAuth();
@@ -42,9 +42,6 @@ export default function LoginPage() {
         <Card className="rounded-lg p-10 shadow-sm">
           <CardContent className="space-y-8 px-0">
             <div className="flex flex-col items-center text-center">
-              <div className="mb-6">
-                <Logo size="lg" />
-              </div>
               <h1 className="text-2xl font-semibold tracking-tight text-foreground">
                 GAP Evaluator
               </h1>
