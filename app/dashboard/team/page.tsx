@@ -20,26 +20,32 @@ import {
     Briefcase,
     Loader2,
     AlertCircle,
-    MoreHorizontal,
     Edit2,
     Trash2,
     Mail,
     User as UserIcon,
-    X
 } from "lucide-react";
 
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Select } from "@/components/ui/Select";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
-import { ItemActions } from "@/components/ui/ItemActions";
 import { Avatar } from "@/components/ui/Avatar";
+import { Label } from "@/components/ui/label";
+import {
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+} from "@/components/ui/table";
 
 interface UserProfile {
     id: string;
@@ -182,7 +188,7 @@ function TeamDirectory() {
             <div className="flex flex-col items-center justify-center py-20 text-center">
                 <AlertCircle className="mb-4 h-12 w-12 text-red-500" />
                 <h1 className="text-xl font-semibold">Access Denied</h1>
-                <p className="text-zinc-500">Only administrators, managers, and team leads can view the team directory.</p>
+                <p className="text-muted-foreground">Only administrators, managers, and team leads can view the team directory.</p>
             </div>
         );
     }
@@ -202,7 +208,7 @@ function TeamDirectory() {
             {isAdmin && (
                 <div className="flex items-center justify-end">
                     <div className="w-64">
-                        <Select
+                        <NativeSelect
                             value={deptFilter}
                             onChange={(e) => setDeptFilter(e.target.value)}
                         >
@@ -210,7 +216,7 @@ function TeamDirectory() {
                             {departments.map((d: Department) => (
                                 <option key={d.id} value={d.id}>{d.name}</option>
                             ))}
-                        </Select>
+                        </NativeSelect>
                     </div>
                 </div>
             )}
@@ -225,110 +231,110 @@ function TeamDirectory() {
                         description="Try adjusting your filters or adding new members."
                     />
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="border-b border-zinc-100 bg-zinc-50/50 text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:bg-zinc-800/50 dark:border-zinc-800">
-                                    <th className="px-6 py-4">User</th>
-                                    <th className="px-6 py-4">Department</th>
-                                    <th className="px-6 py-4">Role</th>
-                                    <th className="px-6 py-4">Access Level</th>
-                                    {currentUserRole === "Admin" && <th className="px-6 py-4 text-right">Actions</th>}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                                {filteredUsers.map((user: UserProfile) => (
-                                    <tr key={user.id} className="group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <Avatar src={user.photoURL} name={user.displayName} />
-                                                <div className="flex flex-col min-w-0">
-                                                    <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                                                        {user.displayName || "Anonymous User"}
-                                                    </span>
-                                                    <span className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
-                                                        {user.email}
-                                                    </span>
-                                                </div>
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                <TableHead className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">User</TableHead>
+                                <TableHead className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Department</TableHead>
+                                <TableHead className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Role</TableHead>
+                                <TableHead className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Access Level</TableHead>
+                                {currentUserRole === "Admin" && (
+                                    <TableHead className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Actions</TableHead>
+                                )}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredUsers.map((user: UserProfile) => (
+                                <TableRow key={user.id}>
+                                    <TableCell className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <Avatar src={user.photoURL} name={user.displayName} />
+                                            <div className="flex flex-col min-w-0">
+                                                <span className="text-sm font-bold text-foreground truncate">
+                                                    {user.displayName || "Anonymous User"}
+                                                </span>
+                                                <span className="text-xs text-muted-foreground truncate">
+                                                    {user.email}
+                                                </span>
                                             </div>
-                                        </td>
-                                        <td className="px-6 py-4">
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="px-6 py-4">
+                                        {isAdmin ? (
+                                            <NativeSelect
+                                                disabled={updating === user.id}
+                                                value={user.departmentId || ""}
+                                                onChange={(e) => handleUpdate(user.id, { departmentId: e.target.value })}
+                                                className="bg-transparent border-transparent text-sm font-medium text-muted-foreground focus-visible:border-ring"
+                                            >
+                                                <option value="">No Department</option>
+                                                {departments.map((d: Department) => (
+                                                    <option key={d.id} value={d.id}>{d.name}</option>
+                                                ))}
+                                            </NativeSelect>
+                                        ) : (
+                                            <span className="text-sm font-medium text-muted-foreground">
+                                                {departments.find(d => d.id === user.departmentId)?.name || "No Department"}
+                                            </span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
                                             {isAdmin ? (
-                                                <select
+                                                <NativeSelect
                                                     disabled={updating === user.id}
-                                                    value={user.departmentId || ""}
-                                                    onChange={(e) => handleUpdate(user.id, { departmentId: e.target.value })}
-                                                    className="bg-transparent text-sm font-medium text-zinc-600 dark:text-zinc-300 focus:outline-none cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                                                    value={user.role}
+                                                    onChange={(e) => handleUpdate(user.id, { role: e.target.value })}
+                                                    className="bg-transparent border-transparent text-sm font-medium text-muted-foreground focus-visible:border-ring"
                                                 >
-                                                    <option value="" className="dark:bg-zinc-800">No Department</option>
-                                                    {departments.map((d: Department) => (
-                                                        <option key={d.id} value={d.id} className="dark:bg-zinc-800">{d.name}</option>
+                                                    <option value="">No Role</option>
+                                                    {roles.map((r) => (
+                                                        <option key={r.id} value={r.name}>{r.name}</option>
                                                     ))}
-                                                </select>
+                                                </NativeSelect>
                                             ) : (
-                                                <span className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
-                                                    {departments.find(d => d.id === user.departmentId)?.name || "No Department"}
+                                                <span className="text-sm font-medium text-muted-foreground">
+                                                    {user.role}
                                                 </span>
                                             )}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2">
-                                                {isAdmin ? (
-                                                    <select
-                                                        disabled={updating === user.id}
-                                                        value={user.role}
-                                                        onChange={(e) => handleUpdate(user.id, { role: e.target.value })}
-                                                        className="bg-transparent text-sm font-medium text-zinc-600 dark:text-zinc-300 focus:outline-none cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-                                                    >
-                                                        <option value="" className="dark:bg-zinc-800">No Role</option>
-                                                        {roles.map((r) => (
-                                                            <option key={r.id} value={r.name} className="dark:bg-zinc-800">{r.name}</option>
-                                                        ))}
-                                                    </select>
-                                                ) : (
-                                                    <span className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
-                                                        {user.role}
-                                                    </span>
-                                                )}
-                                                {updating === user.id && <Loader2 className="h-3 w-3 animate-spin text-zinc-400" />}
+                                            {updating === user.id && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="px-6 py-4">
+                                        {(() => {
+                                            const userRole = roles.find(r => r.name === user.role);
+                                            if (userRole?.isAdmin) return <Badge variant="amber" icon={Shield}>Admin Access</Badge>;
+                                            if (userRole?.canManageTeam) return <Badge variant="blue" icon={Briefcase}>Department Lead</Badge>;
+                                            return <Badge variant="zinc" icon={UserCircle}>Team Member</Badge>;
+                                        })()}
+                                    </TableCell>
+                                    {isAdmin && (
+                                        <TableCell className="px-6 py-4 text-right">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => openEditModal(user)}
+                                                    disabled={!!updating}
+                                                >
+                                                    <Edit2 className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="danger"
+                                                    size="icon"
+                                                    className="bg-transparent hover:bg-red-50"
+                                                    onClick={() => handleDelete(user.id)}
+                                                    disabled={!!updating}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
                                             </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {(() => {
-                                                const userRole = roles.find(r => r.name === user.role);
-                                                if (userRole?.isAdmin) return <Badge variant="amber" icon={Shield}>Admin Access</Badge>;
-                                                if (userRole?.canManageTeam) return <Badge variant="blue" icon={Briefcase}>Department Lead</Badge>;
-                                                return <Badge variant="zinc" icon={UserCircle}>Team Member</Badge>;
-                                            })()}
-                                        </td>
-                                        {isAdmin && (
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => openEditModal(user)}
-                                                        disabled={!!updating}
-                                                    >
-                                                        <Edit2 className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="danger"
-                                                        size="icon"
-                                                        className="bg-transparent hover:bg-red-50"
-                                                        onClick={() => handleDelete(user.id)}
-                                                        disabled={!!updating}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                        )}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                        </TableCell>
+                                    )}
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                 )}
             </Card>
 
@@ -353,7 +359,7 @@ function TeamDirectory() {
             >
                 <div className="space-y-6">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Display Name</label>
+                        <Label>Display Name</Label>
                         <Input
                             autoFocus
                             value={editName}
@@ -363,7 +369,7 @@ function TeamDirectory() {
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Email Address</label>
+                        <Label>Email Address</Label>
                         <Input
                             value={editEmail}
                             onChange={(e) => setEditEmail(e.target.value)}

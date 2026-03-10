@@ -18,17 +18,17 @@ import {
 import { motion } from "framer-motion";
 import {
     ArrowLeft,
-    Loader2,
     Send,
     Star,
     CheckCircle2,
     AlertCircle,
     MessageSquare,
-    ChevronDown,
-    ChevronUp,
     ShieldCheck
 } from "lucide-react";
 import Link from "next/link";
+import { Loading } from "@/components/ui/Loading";
+import { Button } from "@/components/ui/Button";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Question {
     id: string;
@@ -102,12 +102,9 @@ export default function EvaluationForm() {
                     const presetData = presetSnap.data();
                     if (presetData.questions && presetData.questions.length > 0) {
                         // Fetch actual valid questions from library
-                        // Optimization: We fetch all questions. In a production app with thousands of questions, 
-                        // we would use document lookups or an 'in' query.
                         const allQsSnap = await getDocs(collection(db, "questions"));
                         const allQs = allQsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Question));
 
-                        // Map preset IDs to question objects, maintaining preset order
                         const questionMap = new Map(allQs.map(q => [q.id, q]));
                         qs = presetData.questions
                             .map((id: string) => questionMap.get(id))
@@ -173,11 +170,7 @@ export default function EvaluationForm() {
     };
 
     if (loading) {
-        return (
-            <div className="flex min-h-screen items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
-            </div>
-        );
+        return <Loading className="min-h-screen" />;
     }
 
     if (submitted) {
@@ -186,12 +179,12 @@ export default function EvaluationForm() {
                 <motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 text-emerald-500"
+                    className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500"
                 >
                     <CheckCircle2 className="h-10 w-10" />
                 </motion.div>
-                <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Evaluation Submitted</h2>
-                <p className="mt-2 text-zinc-500">Thank you for your feedback. Redirecting you back...</p>
+                <h2 className="text-2xl font-bold text-foreground">Evaluation Submitted</h2>
+                <p className="mt-2 text-muted-foreground">Thank you for your feedback. Redirecting you back...</p>
             </div>
         );
     }
@@ -199,9 +192,9 @@ export default function EvaluationForm() {
     if (!assignment) {
         return (
             <div className="py-20 text-center">
-                <AlertCircle className="mx-auto mb-4 h-12 w-12 text-zinc-300" />
-                <h2 className="text-xl font-bold">Assignment not found</h2>
-                <Link href="/dashboard/evaluations" className="mt-4 text-zinc-900 underline">Back to My Evaluations</Link>
+                <AlertCircle className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                <h2 className="text-xl font-bold text-foreground">Assignment not found</h2>
+                <Link href="/dashboard/evaluations" className="mt-4 text-foreground underline">Back to My Evaluations</Link>
             </div>
         );
     }
@@ -210,24 +203,24 @@ export default function EvaluationForm() {
         <div className="mx-auto max-w-7xl space-y-8">
             <Link
                 href="/dashboard/evaluations"
-                className="inline-flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
                 <ArrowLeft className="h-4 w-4" />
                 Back to Evaluations
             </Link>
 
             <header>
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     {assignment.periodName}
                 </div>
-                <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-                    Evaluating <span className="text-zinc-900 dark:text-zinc-100">{assignment?.evaluateeName}</span>
+                <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+                    Evaluating <span className="text-foreground">{assignment?.evaluateeName}</span>
                 </h1>
-                <p className="mt-2 text-zinc-500 dark:text-zinc-400">Please provide honest and constructive feedback.</p>
+                <p className="mt-2 text-muted-foreground">Please provide honest and constructive feedback.</p>
             </header>
 
-            <section className="rounded-3xl bg-zinc-50 p-8 ring-1 ring-zinc-200 dark:bg-zinc-900/50 dark:ring-zinc-800">
-                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-6 flex items-center gap-2">
+            <section className="rounded-lg bg-muted/50 p-8 ring-1 ring-border">
+                <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
                     <Star className="h-5 w-5 text-amber-500" />
                     Rating Definitions
                 </h2>
@@ -246,12 +239,12 @@ export default function EvaluationForm() {
                         { val: "N/A", label: "New / Not Applicable", desc: "Member has not been in position long enough to have demonstrated essential elements." }
                     ].map((item) => (
                         <div key={item.val} className="flex gap-4 items-start">
-                            <span className="flex h-8 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-xs font-bold text-white dark:bg-white dark:text-zinc-950">
+                            <span className="flex h-8 w-10 shrink-0 items-center justify-center rounded-lg bg-foreground text-xs font-bold text-background">
                                 {item.val}
                             </span>
                             <div>
-                                <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50 leading-none">{item.label}</p>
-                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-normal">{item.desc}</p>
+                                <p className="text-sm font-bold text-foreground leading-none">{item.label}</p>
+                                <p className="text-xs text-muted-foreground mt-1 leading-normal">{item.desc}</p>
                             </div>
                         </div>
                     ))}
@@ -268,13 +261,13 @@ export default function EvaluationForm() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.1 }}
-                            className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800"
+                            className="rounded-lg bg-card p-8 shadow-sm ring-1 ring-border"
                         >
                             <div className="mb-6 flex items-start gap-4">
-                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-bold text-zinc-500 dark:bg-zinc-800 tracking-tighter">
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground tracking-tighter">
                                     {String(i + 1).padStart(2, '0')}
                                 </span>
-                                <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50 leading-tight pt-1">
+                                <h3 className="text-lg font-medium text-foreground leading-tight pt-1">
                                     {q.text}
                                 </h3>
                             </div>
@@ -285,9 +278,9 @@ export default function EvaluationForm() {
                                         <button
                                             type="button"
                                             onClick={() => handleScaleChange(q.id, "N/A")}
-                                            className={`flex h-12 w-20 items-center justify-center rounded-xl text-xs font-bold transition-all cursor-pointer ${responses[q.id] === "N/A"
-                                                ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
-                                                : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                                            className={`flex h-12 w-20 items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${responses[q.id] === "N/A"
+                                                ? "bg-foreground text-background"
+                                                : "bg-muted text-muted-foreground hover:bg-muted/80"
                                                 }`}
                                         >
                                             N/A
@@ -297,9 +290,9 @@ export default function EvaluationForm() {
                                                 key={val}
                                                 type="button"
                                                 onClick={() => handleScaleChange(q.id, val)}
-                                                className={`flex h-12 w-12 items-center justify-center rounded-xl text-sm font-bold transition-all cursor-pointer ${responses[q.id] === val
-                                                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
-                                                    : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                                                className={`flex h-12 w-12 items-center justify-center rounded-lg text-sm font-bold transition-all cursor-pointer ${responses[q.id] === val
+                                                    ? "bg-foreground text-background"
+                                                    : "bg-muted text-muted-foreground hover:bg-muted/80"
                                                     }`}
                                             >
                                                 {val}
@@ -312,7 +305,7 @@ export default function EvaluationForm() {
                                             <button
                                                 type="button"
                                                 onClick={() => setResponses(prev => ({ ...prev, [`${q.id}_comment`]: "" }))}
-                                                className="flex items-center gap-2 text-xs font-bold text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors uppercase tracking-widest"
+                                                className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors uppercase tracking-widest"
                                             >
                                                 <MessageSquare className="h-3.5 w-3.5" />
                                                 Add Comment
@@ -325,7 +318,7 @@ export default function EvaluationForm() {
                                             className="space-y-3"
                                         >
                                             <div className="flex items-center justify-between">
-                                                <label className="text-[10px] uppercase font-black tracking-widest text-zinc-400">Supporting Context</label>
+                                                <label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Supporting Context</label>
                                                 <button
                                                     type="button"
                                                     onClick={() => {
@@ -333,48 +326,49 @@ export default function EvaluationForm() {
                                                         delete newResponses[`${q.id}_comment`];
                                                         setResponses(newResponses);
                                                     }}
-                                                    className="text-[10px] uppercase font-black tracking-widest text-red-500 hover:text-red-600 transition-colors"
+                                                    className="text-[10px] uppercase font-black tracking-widest text-destructive hover:text-destructive/80 transition-colors"
                                                 >
                                                     Remove
                                                 </button>
                                             </div>
-                                            <textarea
+                                            <Textarea
                                                 value={responses[`${q.id}_comment`] || ""}
                                                 onChange={(e) => setResponses(prev => ({ ...prev, [`${q.id}_comment`]: e.target.value }))}
                                                 placeholder="Provide additional context for this rating..."
                                                 rows={3}
-                                                className="w-full rounded-2xl border-zinc-100 bg-zinc-50 p-4 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:border-zinc-800 dark:bg-zinc-800/50"
+                                                className="rounded-lg"
                                             />
                                         </motion.div>
                                     )}
                                 </div>
                             ) : (
-                                <textarea
+                                <Textarea
                                     required
                                     rows={4}
                                     value={responses[q.id] || ""}
                                     onChange={(e) => handleParagraphChange(q.id, e.target.value)}
                                     placeholder="Share your thoughts here..."
-                                    className="w-full rounded-2xl border-zinc-200 bg-zinc-50 p-4 text-sm transition-all focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:focus:border-zinc-100 dark:focus:ring-zinc-100"
+                                    className="rounded-lg"
                                 />
                             )}
                         </motion.div>
                     );
                 })}
 
-                <footer className="flex flex-col sm:flex-row items-center justify-between rounded-3xl bg-zinc-50 p-6 sm:p-8 dark:bg-zinc-900/50 gap-6">
-                    <div className="flex items-center gap-3 text-zinc-500">
+                <footer className="flex flex-col sm:flex-row items-center justify-between rounded-lg bg-muted/50 p-6 sm:p-8 gap-6">
+                    <div className="flex items-center gap-3 text-muted-foreground">
                         <ShieldCheck className="h-5 w-5 text-emerald-500" />
                         <p className="text-sm font-medium">Responses are encrypted and secure</p>
                     </div>
-                    <button
+                    <Button
                         type="submit"
+                        loading={submitting}
                         disabled={submitting || Object.keys(responses).length < questions.length}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-8 py-4 text-sm font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-950 cursor-pointer shadow-lg"
+                        icon={Send}
+                        className="w-full sm:w-auto"
                     >
-                        {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                         Submit Evaluation
-                    </button>
+                    </Button>
                 </footer>
             </form>
         </div>

@@ -20,7 +20,6 @@ import {
     Trash2,
     Edit2,
     Building2,
-    Loader2,
     AlertCircle,
     ChevronRight,
     Search
@@ -33,6 +32,8 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { ItemActions } from "@/components/ui/ItemActions";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Department {
     id: string;
@@ -133,7 +134,7 @@ export default function DepartmentsPage() {
             <div className="flex flex-col items-center justify-center py-20 text-center">
                 <AlertCircle className="mb-4 h-12 w-12 text-red-500" />
                 <h1 className="text-xl font-semibold">Access Denied</h1>
-                <p className="text-zinc-500">Only administrators can manage departments.</p>
+                <p className="text-muted-foreground">Only administrators can manage departments.</p>
             </div>
         );
     }
@@ -172,15 +173,18 @@ export default function DepartmentsPage() {
                                         onChange={(e) => setName(e.target.value)}
                                         placeholder="e.g. Engineering, Marketing, HR"
                                     />
-                                    <Input
-                                        label="Description (Optional)"
-                                        value={description}
-                                        onChange={(e) => setDescription(e.target.value)}
-                                        placeholder="Brief description of the department"
-                                    />
+                                    <div className="flex flex-col gap-1.5">
+                                        <Label>Description (Optional)</Label>
+                                        <Textarea
+                                            value={description}
+                                            onChange={(e) => setDescription(e.target.value)}
+                                            placeholder="Brief description of the department"
+                                            className="min-h-[40px]"
+                                        />
+                                    </div>
                                 </div>
 
-                                <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                                <div className="flex justify-end gap-3 pt-4 border-t border-border">
                                     <Button variant="ghost" type="button" onClick={resetForm}>
                                         Cancel
                                     </Button>
@@ -200,20 +204,18 @@ export default function DepartmentsPage() {
 
             <div className="space-y-4">
                 <div className="relative max-w-sm">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                    <input
-                        type="text"
+                    <Input
                         placeholder="Search departments..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full rounded-xl border-zinc-200 bg-white pl-10 pr-4 py-2 text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-800 dark:bg-zinc-900 shadow-sm"
+                        icon={Search}
                     />
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {loading ? (
                         Array.from({ length: 3 }).map((_, i) => (
-                            <div key={i} className="h-40 animate-pulse rounded-3xl bg-zinc-100 dark:bg-zinc-800" />
+                            <div key={i} className="h-40 animate-pulse rounded-lg bg-muted" />
                         ))
                     ) : filteredDepartments.length === 0 ? (
                         <EmptyState
@@ -227,7 +229,7 @@ export default function DepartmentsPage() {
                             <motion.div layout key={dept.id} className="group">
                                 <Card className="p-6 relative isolate">
                                     <div className="flex items-start justify-between">
-                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-900 dark:bg-white dark:text-zinc-950">
+                                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-foreground">
                                             <Building2 className="h-6 w-6" />
                                         </div>
                                         <ItemActions>
@@ -249,14 +251,14 @@ export default function DepartmentsPage() {
                                         </ItemActions>
                                     </div>
                                     <div className="mt-4">
-                                        <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">{dept.name}</h3>
-                                        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2">
+                                        <h3 className="text-lg font-bold text-foreground">{dept.name}</h3>
+                                        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
                                             {dept.description || "No description provided."}
                                         </p>
                                     </div>
                                     <Link
                                         href={`/dashboard/team?dept=${dept.id}`}
-                                        className="mt-6 flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors"
+                                        className="mt-6 flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
                                     >
                                         <span>Manage Members</span>
                                         <ChevronRight className="h-3 w-3" />

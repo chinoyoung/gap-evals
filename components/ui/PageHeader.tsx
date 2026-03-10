@@ -1,3 +1,4 @@
+import * as React from "react";
 import { cn } from "@/lib/utils";
 
 interface PageHeaderProps {
@@ -16,9 +17,9 @@ export function PageHeader({
     return (
         <header className={cn("flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8", className)}>
             <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-zinc-800 dark:text-zinc-50">{title}</h1>
+                <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
                 {description && (
-                    <p className="mt-2 text-zinc-500 dark:text-zinc-400">{description}</p>
+                    <p className="mt-2 text-muted-foreground">{description}</p>
                 )}
             </div>
             {children && (

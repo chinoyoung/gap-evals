@@ -1,54 +1,54 @@
-import { cn } from "@/lib/utils";
-import { InputHTMLAttributes, forwardRef } from "react";
-import { LucideIcon } from "lucide-react";
+import * as React from "react"
+import { Input as InputPrimitive } from "@base-ui/react/input"
+import type { LucideIcon } from "lucide-react"
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-    label?: string;
-    error?: string;
-    icon?: LucideIcon;
+import { cn } from "@/lib/utils"
+
+interface InputProps extends React.ComponentProps<"input"> {
+  label?: string
+  icon?: LucideIcon
+  error?: string
 }
 
-const Input = forwardRef<HTMLInputElement, InputProps>(({
-    className,
-    label,
-    error,
-    id,
-    icon: Icon,
-    ...props
-}, ref) => {
-    return (
-        <div className="space-y-1.5 w-full">
-            {label && (
-                <label
-                    htmlFor={id}
-                    className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
-                >
-                    {label}
-                </label>
-            )}
-            <div className="relative">
-                {Icon && (
-                    <Icon className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                )}
-                <input
-                    ref={ref}
-                    id={id}
-                    className={cn(
-                        "w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm transition-all focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:focus:border-zinc-100 dark:focus:ring-zinc-100",
-                        Icon && "pl-11",
-                        error && "border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-500",
-                        className
-                    )}
-                    {...props}
-                />
-            </div>
-            {error && (
-                <p className="text-xs text-red-500 mt-1">{error}</p>
-            )}
-        </div>
-    );
-});
+function Input({ className, type, label, icon: Icon, error, id, ...props }: InputProps) {
+  const generatedId = React.useId()
+  const inputId = id ?? (label ? generatedId : undefined)
 
-Input.displayName = "Input";
+  return (
+    <div className="flex flex-col gap-1.5 w-full">
+      {label && (
+        <label
+          htmlFor={inputId}
+          className="text-sm font-medium text-foreground"
+        >
+          {label}
+        </label>
+      )}
+      <div className="relative w-full">
+        {Icon && (
+          <div className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground">
+            <Icon className="size-4" />
+          </div>
+        )}
+        <InputPrimitive
+          id={inputId}
+          type={type}
+          data-slot="input"
+          aria-invalid={error ? true : undefined}
+          className={cn(
+            "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
+            Icon && "pl-9",
+            className
+          )}
+          {...props}
+        />
+      </div>
+      {error && (
+        <p className="text-xs text-destructive">{error}</p>
+      )}
+    </div>
+  )
+}
 
-export { Input };
+export { Input }
+export type { InputProps }

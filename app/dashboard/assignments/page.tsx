@@ -26,11 +26,19 @@ import {
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Select } from "@/components/ui/Select";
+import { NativeSelect as Select } from "@/components/ui/native-select";
 import { Badge } from "@/components/ui/Badge";
 import { ItemActions } from "@/components/ui/ItemActions";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
+import {
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell
+} from "@/components/ui/table";
 
 interface UserProfile {
     id: string;
@@ -142,9 +150,9 @@ export default function AssignmentsPage() {
     if (!isAdmin) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center">
-                <AlertCircle className="mb-4 h-12 w-12 text-red-500" />
-                <h1 className="text-xl font-semibold">Access Denied</h1>
-                <p className="text-zinc-500">Only administrators can manage assignments.</p>
+                <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
+                <h1 className="text-xl font-semibold text-foreground">Access Denied</h1>
+                <p className="text-muted-foreground">Only administrators can manage assignments.</p>
             </div>
         );
     }
@@ -196,7 +204,7 @@ export default function AssignmentsPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Relationship Type</label>
+                                    <label className="text-sm font-medium text-foreground">Relationship Type</label>
                                     <div className="flex flex-wrap gap-3">
                                         {["peer", "manager-to-employee", "employee-to-manager", "self"].map((t) => (
                                             <button
@@ -204,8 +212,8 @@ export default function AssignmentsPage() {
                                                 type="button"
                                                 onClick={() => setType(t as any)}
                                                 className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${type === t
-                                                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
-                                                    : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400"
+                                                    ? "bg-foreground text-background"
+                                                    : "bg-muted text-muted-foreground hover:bg-muted/80"
                                                     }`}
                                             >
                                                 {t.replace(/-/g, " ")}
@@ -214,7 +222,7 @@ export default function AssignmentsPage() {
                                     </div>
                                 </div>
 
-                                <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                                <div className="flex justify-end gap-3 pt-4 border-t border-border">
                                     <Button variant="ghost" type="button" onClick={() => setIsAdding(false)}>
                                         Cancel
                                     </Button>
@@ -234,7 +242,7 @@ export default function AssignmentsPage() {
 
             <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                    <div className="text-sm font-medium text-zinc-500">Filter by Department:</div>
+                    <div className="text-sm font-medium text-muted-foreground">Filter by Department:</div>
                     <div className="w-64">
                         <Select
                             value={deptFilter}
@@ -259,71 +267,69 @@ export default function AssignmentsPage() {
                             description="No assignments found for this department."
                         />
                     ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead>
-                                    <tr className="border-b border-zinc-100 bg-zinc-50/50 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:bg-zinc-800/50 dark:border-zinc-800">
-                                        <th className="px-6 py-4">Evaluator</th>
-                                        <th className="px-6 py-4 text-center"></th>
-                                        <th className="px-6 py-4">Evaluatee</th>
-                                        <th className="px-6 py-4">Department</th>
-                                        <th className="px-6 py-4">Type</th>
-                                        <th className="px-6 py-4 text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                                    {filteredAssignments.map((a) => {
-                                        const evaluatee = users.find(u => u.id === a.evaluateeId);
-                                        const dept = departments.find(d => d.id === evaluatee?.departmentId);
-                                        return (
-                                            <tr key={a.id} className="group hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
-                                                            <User className="h-4 w-4" />
-                                                        </div>
-                                                        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.evaluatorName}</span>
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-muted/50">
+                                    <TableHead className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Evaluator</TableHead>
+                                    <TableHead className="px-6 py-4 text-center"></TableHead>
+                                    <TableHead className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Evaluatee</TableHead>
+                                    <TableHead className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Department</TableHead>
+                                    <TableHead className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</TableHead>
+                                    <TableHead className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredAssignments.map((a) => {
+                                    const evaluatee = users.find(u => u.id === a.evaluateeId);
+                                    const dept = departments.find(d => d.id === evaluatee?.departmentId);
+                                    return (
+                                        <TableRow key={a.id} className="group">
+                                            <TableCell className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                                                        <User className="h-4 w-4" />
                                                     </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <ArrowRight className="inline h-4 w-4 text-zinc-300" />
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
-                                                            <User className="h-4 w-4" />
-                                                        </div>
-                                                        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.evaluateeName}</span>
+                                                    <span className="text-sm font-medium text-foreground">{a.evaluatorName}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4 text-center">
+                                                <ArrowRight className="inline h-4 w-4 text-muted-foreground" />
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                                                        <User className="h-4 w-4" />
                                                     </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                                                        {dept?.name || "Unassigned"}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <Badge variant="zinc">
-                                                        {a.type.replace(/-/g, " ")}
-                                                    </Badge>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <ItemActions>
-                                                        <Button
-                                                            variant="danger"
-                                                            size="icon"
-                                                            className="bg-transparent hover:bg-red-50"
-                                                            onClick={() => handleDelete(a.id)}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </ItemActions>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+                                                    <span className="text-sm font-medium text-foreground">{a.evaluateeName}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4 whitespace-nowrap">
+                                                <span className="text-sm text-muted-foreground">
+                                                    {dept?.name || "Unassigned"}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4 whitespace-nowrap">
+                                                <Badge variant="zinc">
+                                                    {a.type.replace(/-/g, " ")}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4 text-right">
+                                                <ItemActions>
+                                                    <Button
+                                                        variant="danger"
+                                                        size="icon"
+                                                        className="bg-transparent hover:bg-destructive/10"
+                                                        onClick={() => handleDelete(a.id)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </ItemActions>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
                     )}
                 </Card>
             </div>

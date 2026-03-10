@@ -7,6 +7,7 @@ import { QuestionItem, Question } from "@/components/ui/QuestionItem";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface PeriodQuestionsProps {
     questions: Question[];
@@ -94,13 +95,13 @@ export function PeriodQuestions({
                                 <div className="grid grid-cols-2 gap-8">
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">Field Type</label>
-                                        <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+                                        <div className="flex gap-2 p-1 bg-muted rounded-lg">
                                             {(["scale", "paragraph"] as const).map((t) => (
                                                 <button
                                                     key={t}
                                                     type="button"
                                                     onClick={() => setType(t)}
-                                                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${type === t ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white" : "text-zinc-500"}`}
+                                                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${type === t ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
                                                 >
                                                     {t === "scale" ? <Hash className="h-3.5 w-3.5" /> : <Type className="h-3.5 w-3.5" />}
                                                     {t === "scale" ? "Scale" : "Text"}
@@ -113,20 +114,20 @@ export function PeriodQuestions({
                                         <div
                                             onClick={() => setScope(scope === "self" ? "all" : "self")}
                                             className={`h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-all cursor-pointer ${scope === "self"
-                                                ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:border-zinc-100 dark:text-zinc-950"
-                                                : "border-zinc-200 hover:border-zinc-400 dark:border-zinc-700"
+                                                ? "bg-foreground border-foreground text-background"
+                                                : "border-border hover:border-ring"
                                                 }`}
                                         >
                                             {scope === "self" && <Check className="h-4 w-4" strokeWidth={3} />}
                                         </div>
                                         <div className="cursor-pointer select-none" onClick={() => setScope(scope === "self" ? "all" : "self")}>
-                                            <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50 leading-tight">Self-Evaluation Only</p>
-                                            <p className="text-[11px] text-zinc-500">Only visible for self-reflections.</p>
+                                            <p className="text-sm font-bold text-foreground leading-tight">Self-Evaluation Only</p>
+                                            <p className="text-[11px] text-muted-foreground">Only visible for self-reflections.</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                                <div className="flex justify-end gap-3 pt-4 border-t border-border">
                                     <Button variant="ghost" onClick={reset}>Cancel</Button>
                                     <Button type="submit" loading={submitting}>{editingId ? "Update" : "Save"} Question</Button>
                                 </div>
@@ -136,13 +137,16 @@ export function PeriodQuestions({
                 )}
             </AnimatePresence>
 
-            <div className="overflow-hidden rounded-[2rem] bg-white shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800">
+            <div className="overflow-hidden rounded-[2rem] bg-card shadow-sm ring-1 ring-border">
                 {questions.length === 0 ? (
-                    <div className="py-20 text-center text-zinc-500">
-                        No questions defined for this period.
-                    </div>
+                    <EmptyState
+                        icon={Plus}
+                        title="No questions yet"
+                        description="Add questions directly or import from the global library."
+                        className="py-16"
+                    />
                 ) : (
-                    <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    <div className="divide-y divide-border">
                         {questions.map((q) => (
                             <QuestionItem
                                 key={q.id}

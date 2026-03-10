@@ -14,8 +14,9 @@ export function Loading({ className, size = "md" }: LoadingProps) {
     };
 
     return (
-        <div className={cn("flex items-center justify-center p-8", className)}>
-            <Loader2 className={cn("animate-spin text-zinc-300", sizes[size])} />
+        <div className={cn("flex items-center justify-center p-8", className)} role="status" aria-label="Loading">
+            <Loader2 className={cn("animate-spin text-muted-foreground", sizes[size])} />
+            <span className="sr-only">Loading</span>
         </div>
     );
 }

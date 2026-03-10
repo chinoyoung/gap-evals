@@ -55,6 +55,7 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 import { Question } from "@/components/ui/QuestionItem";
 import { Modal } from "@/components/ui/Modal";
@@ -65,7 +66,7 @@ import { X } from "lucide-react";
 import { useCategories, Category } from "@/hooks/useCategories";
 import { CategoryAccordion } from "@/components/questions/CategoryAccordion";
 import { QuestionStats } from "@/components/questions/QuestionStats";
-import { Select } from "@/components/ui/Select";
+import { NativeSelect as Select } from "@/components/ui/native-select";
 
 function SortablePresetItem({ q, onRemove }: { q: Question; onRemove: () => void }) {
     const {
@@ -85,9 +86,9 @@ function SortablePresetItem({ q, onRemove }: { q: Question; onRemove: () => void
     };
 
     return (
-        <div ref={setNodeRef} style={style} className={`bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-3 rounded-xl flex items-center justify-between group ${isDragging ? 'shadow-lg ring-1 ring-zinc-900 z-500' : ''}`}>
+        <div ref={setNodeRef} style={style} className={`bg-card border border-border p-3 rounded-lg flex items-center justify-between group ${isDragging ? 'shadow-lg ring-1 ring-border z-500' : ''}`}>
             <div className="flex items-center gap-3 overflow-hidden">
-                <button className="cursor-grab active:cursor-grabbing text-zinc-300 hover:text-zinc-600" {...attributes} {...listeners}>
+                <button className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground" {...attributes} {...listeners}>
                     <GripVertical className="h-4 w-4" />
                 </button>
                 <div className="min-w-0 flex items-center gap-2">
@@ -97,7 +98,7 @@ function SortablePresetItem({ q, onRemove }: { q: Question; onRemove: () => void
                     <p className="text-xs font-medium truncate">{q.text}</p>
                 </div>
             </div>
-            <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="text-zinc-400 hover:text-red-500 p-1">
+            <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="text-muted-foreground hover:text-destructive p-1">
                 <X className="h-4 w-4" />
             </button>
         </div>
@@ -417,195 +418,189 @@ export default function QuestionsPage() {
     if (!isAdmin) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center">
-                <AlertCircle className="mb-4 h-12 w-12 text-red-500" />
+                <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
                 <h1 className="text-xl font-semibold">Access Denied</h1>
-                <p className="text-zinc-500">Only administrators can manage evaluation questions.</p>
+                <p className="text-muted-foreground">Only administrators can manage evaluation questions.</p>
             </div>
         );
     }
 
     return (
         <div className="space-y-8 pb-20">
-            <PageHeader
-                title="Questions Library"
-                description="Manage questions and create re-usable presets for assignments."
-            >
-                <div className="flex bg-zinc-100 p-1 rounded-xl dark:bg-zinc-800">
-                    <button
-                        onClick={() => setActiveTab("questions")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:cursor-pointer ${activeTab === "questions" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-500 dark:text-white" : "text-zinc-500 hover:text-zinc-500 dark:text-zinc-400"}`}
-                    >
-                        <List className="h-4 w-4" />
-                        Questions
-                    </button>
-                    <button
-                        onClick={() => setActiveTab("presets")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:cursor-pointer ${activeTab === "presets" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-500 dark:text-white" : "text-zinc-500 hover:text-zinc-500 dark:text-zinc-400"}`}
-                    >
-                        <Layers className="h-4 w-4" />
-                        Presets
-                    </button>
-                </div>
-                <Button onClick={() => {
-                    if (activeTab === "questions") {
-                        resetForm();
-                        setIsAdding(true);
-                    } else {
-                        resetPresetForm();
-                        setIsAddingPreset(true);
-                    }
-                }} icon={Plus}>
-                    Add {activeTab === "questions" ? "Question" : "Preset"}
-                </Button>
-            </PageHeader>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "questions" | "presets")}>
+                <PageHeader
+                    title="Questions Library"
+                    description="Manage questions and create re-usable presets for assignments."
+                >
+                    <TabsList>
+                        <TabsTrigger value="questions">
+                            <List className="h-4 w-4" />
+                            Questions
+                        </TabsTrigger>
+                        <TabsTrigger value="presets">
+                            <Layers className="h-4 w-4" />
+                            Presets
+                        </TabsTrigger>
+                    </TabsList>
+                    <Button onClick={() => {
+                        if (activeTab === "questions") {
+                            resetForm();
+                            setIsAdding(true);
+                        } else {
+                            resetPresetForm();
+                            setIsAddingPreset(true);
+                        }
+                    }} icon={Plus}>
+                        Add {activeTab === "questions" ? "Question" : "Preset"}
+                    </Button>
+                </PageHeader>
 
-            {activeTab === "questions" ? (
-                <div className="space-y-6">
-                    {/* Search bar */}
-                    <div className="relative">
-                        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 pointer-events-none" />
-                        <input
-                            type="text"
+                <TabsContent value="questions">
+                    <div className="space-y-6">
+                        {/* Search bar */}
+                        <Input
+                            icon={Search}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search questions..."
-                            className="w-full rounded-xl border-zinc-200 bg-zinc-50 pl-11 pr-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:ring-zinc-100"
                         />
-                    </div>
 
-                    {/* Filters + New Category */}
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-center gap-2 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900 overflow-x-auto">
-                            {(['all', 'scale', 'paragraph'] as const).map((filter) => (
-                                <button
-                                    key={filter}
-                                    onClick={() => setTypeFilter(filter)}
-                                    className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all capitalize cursor-pointer ${typeFilter === filter
-                                        ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
-                                        : "text-zinc-500 hover:text-zinc-200 dark:text-zinc-400"
-                                        }`}
-                                >
-                                    {filter}
-                                </button>
-                            ))}
-                        </div>
-                        <Button
-                            variant="ghost"
-                            onClick={() => {
-                                setCategoryName("");
-                                setEditingCategory(null);
-                                setIsAddingCategory(true);
-                            }}
-                            icon={Plus}
-                        >
-                            New Category
-                        </Button>
-                    </div>
-
-                    {/* Stats */}
-                    <QuestionStats questions={questions} categoryCount={categories.length} />
-
-                    {/* Category Accordions */}
-                    {(loading || categoriesLoading || bootstrapping) ? (
-                        <Card className="overflow-hidden">
-                            <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                                <SkeletonQuestionItem />
-                                <SkeletonQuestionItem />
-                                <SkeletonQuestionItem />
-                                <SkeletonQuestionItem />
+                        {/* Filters + New Category */}
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex items-center gap-2 p-1 rounded-lg bg-muted overflow-x-auto">
+                                {(['all', 'scale', 'paragraph'] as const).map((filter) => (
+                                    <button
+                                        key={filter}
+                                        onClick={() => setTypeFilter(filter)}
+                                        className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all capitalize cursor-pointer ${typeFilter === filter
+                                            ? "bg-background text-foreground shadow-sm"
+                                            : "text-muted-foreground hover:text-foreground"
+                                            }`}
+                                    >
+                                        {filter}
+                                    </button>
+                                ))}
                             </div>
-                        </Card>
-                    ) : visibleCategories.length === 0 && categories.length === 0 ? (
-                        <EmptyState
-                            icon={Layers}
-                            title="No categories yet"
-                            description="Create a category to start organizing your questions."
-                        />
-                    ) : visibleCategories.length === 0 && searchQuery.trim() ? (
-                        <EmptyState
-                            icon={Search}
-                            title="No results found"
-                            description="No questions match your search."
-                        />
-                    ) : (
-                        <div className="space-y-3">
-                            {visibleCategories.map((cat) => (
-                                <CategoryAccordion
-                                    key={cat.id}
-                                    category={cat}
-                                    questions={questionsByCategory[cat.id] || []}
-                                    isExpanded={expandedCategories.has(cat.id)}
-                                    onToggle={() => toggleCategory(cat.id)}
-                                    searchQuery={searchQuery}
-                                    onEditQuestion={startEditing}
-                                    onDeleteQuestion={handleDelete}
-                                    onEditCategory={() => {
-                                        setCategoryName(cat.name);
-                                        setEditingCategory(cat);
-                                        setIsAddingCategory(true);
-                                    }}
-                                    onDeleteCategory={() => {
-                                        setDeletingCategory(cat);
-                                        setReassignCategoryId("");
-                                    }}
-                                    onAddQuestion={() => {
-                                        resetForm();
-                                        setNewQuestionCategoryId(cat.id);
-                                        setIsAdding(true);
-                                    }}
-                                />
-                            ))}
+                            <Button
+                                variant="ghost"
+                                onClick={() => {
+                                    setCategoryName("");
+                                    setEditingCategory(null);
+                                    setIsAddingCategory(true);
+                                }}
+                                icon={Plus}
+                            >
+                                New Category
+                            </Button>
                         </div>
-                    )}
-                </div>
-            ) : (
-                <div className="grid gap-4 md:grid-cols-2">
-                    {presets.length === 0 ? (
-                        <div className="col-span-full">
-                            <EmptyState
-                                className="py-20"
-                                icon={Layers}
-                                title="No presets defined"
-                                description="Create a preset to group questions for easy assignment."
-                            />
-                        </div>
-                    ) : presets.map(p => (
-                        <Card key={p.id} className="p-6 relative group">
-                            <div className="space-y-4">
-                                <div>
-                                    <h3 className="font-bold text-lg">{p.name}</h3>
-                                    <p className="text-sm text-zinc-500">{p.description || "No description."}</p>
+
+                        {/* Stats */}
+                        <QuestionStats questions={questions} categoryCount={categories.length} />
+
+                        {/* Category Accordions */}
+                        {(loading || categoriesLoading || bootstrapping) ? (
+                            <Card className="overflow-hidden">
+                                <div className="divide-y divide-border">
+                                    <SkeletonQuestionItem />
+                                    <SkeletonQuestionItem />
+                                    <SkeletonQuestionItem />
+                                    <SkeletonQuestionItem />
                                 </div>
-                                <div className="space-y-2">
-                                    <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Questions Included</h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {p.questions?.slice(0, 3).map((qid: string) => {
-                                            const q = questions.find(qu => qu.id === qid);
-                                            return q ? (
-                                                <Badge key={qid} variant="zinc">{q.text.substring(0, 20)}...</Badge>
-                                            ) : null;
-                                        })}
-                                        {(p.questions?.length || 0) > 3 && (
-                                            <Badge variant="zinc">+{p.questions.length - 3} more</Badge>
-                                        )}
-                                        {(!p.questions || p.questions.length === 0) && (
-                                            <span className="text-xs text-zinc-400 italic">No questions selected.</span>
-                                        )}
+                            </Card>
+                        ) : visibleCategories.length === 0 && categories.length === 0 ? (
+                            <EmptyState
+                                icon={Layers}
+                                title="No categories yet"
+                                description="Create a category to start organizing your questions."
+                            />
+                        ) : visibleCategories.length === 0 && searchQuery.trim() ? (
+                            <EmptyState
+                                icon={Search}
+                                title="No results found"
+                                description="No questions match your search."
+                            />
+                        ) : (
+                            <div className="space-y-3">
+                                {visibleCategories.map((cat) => (
+                                    <CategoryAccordion
+                                        key={cat.id}
+                                        category={cat}
+                                        questions={questionsByCategory[cat.id] || []}
+                                        isExpanded={expandedCategories.has(cat.id)}
+                                        onToggle={() => toggleCategory(cat.id)}
+                                        searchQuery={searchQuery}
+                                        onEditQuestion={startEditing}
+                                        onDeleteQuestion={handleDelete}
+                                        onEditCategory={() => {
+                                            setCategoryName(cat.name);
+                                            setEditingCategory(cat);
+                                            setIsAddingCategory(true);
+                                        }}
+                                        onDeleteCategory={() => {
+                                            setDeletingCategory(cat);
+                                            setReassignCategoryId("");
+                                        }}
+                                        onAddQuestion={() => {
+                                            resetForm();
+                                            setNewQuestionCategoryId(cat.id);
+                                            setIsAdding(true);
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="presets">
+                    <div className="grid gap-4 md:grid-cols-2">
+                        {presets.length === 0 ? (
+                            <div className="col-span-full">
+                                <EmptyState
+                                    className="py-20"
+                                    icon={Layers}
+                                    title="No presets defined"
+                                    description="Create a preset to group questions for easy assignment."
+                                />
+                            </div>
+                        ) : presets.map(p => (
+                            <Card key={p.id} className="p-6 relative group">
+                                <div className="space-y-4">
+                                    <div>
+                                        <h3 className="font-bold text-lg">{p.name}</h3>
+                                        <p className="text-sm text-muted-foreground">{p.description || "No description."}</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Questions Included</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {p.questions?.slice(0, 3).map((qid: string) => {
+                                                const q = questions.find(qu => qu.id === qid);
+                                                return q ? (
+                                                    <Badge key={qid} variant="zinc">{q.text.substring(0, 20)}...</Badge>
+                                                ) : null;
+                                            })}
+                                            {(p.questions?.length || 0) > 3 && (
+                                                <Badge variant="zinc">+{p.questions.length - 3} more</Badge>
+                                            )}
+                                            {(!p.questions || p.questions.length === 0) && (
+                                                <span className="text-xs text-muted-foreground italic">No questions selected.</span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div className="absolute top-4 right-4 flex gap-2">
-                                <button onClick={() => openEditPreset(p)} className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100">
-                                    <Edit2 className="h-4 w-4" />
-                                </button>
-                                <button onClick={() => handleDeletePreset(p.id)} className="p-2 hover:bg-red-50 rounded-lg text-zinc-400 hover:text-red-600 dark:hover:bg-red-900/20">
-                                    <Trash2 className="h-4 w-4" />
-                                </button>
-                            </div>
-                        </Card>
-                    ))}
-                </div>
-            )}
+                                <div className="absolute top-4 right-4 flex gap-2">
+                                    <button onClick={() => openEditPreset(p)} className="p-2 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors">
+                                        <Edit2 className="h-4 w-4" />
+                                    </button>
+                                    <button onClick={() => handleDeletePreset(p.id)} className="p-2 hover:bg-destructive/10 rounded-lg text-muted-foreground hover:text-destructive transition-colors">
+                                        <Trash2 className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                </TabsContent>
+            </Tabs>
 
             {/* Questions Modal */}
             <Modal
@@ -625,27 +620,24 @@ export default function QuestionsPage() {
                 )}
             >
                 <form onSubmit={handleFormSubmit} className="space-y-6">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Question Text</label>
-                        <input
-                            autoFocus
-                            value={newText}
-                            onChange={(e) => setNewText(e.target.value)}
-                            placeholder="e.g. How would you rate your communication this month?"
-                            className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:focus:ring-zinc-100"
-                        />
-                    </div>
+                    <Input
+                        autoFocus
+                        label="Question Text"
+                        value={newText}
+                        onChange={(e) => setNewText(e.target.value)}
+                        placeholder="e.g. How would you rate your communication this month?"
+                    />
 
                     <div className="grid grid-cols-2 gap-8">
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Field Type</label>
-                            <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+                            <div className="flex gap-2 p-1 bg-muted rounded-lg">
                                 {(["scale", "paragraph"] as const).map((type) => (
                                     <button
                                         key={type}
                                         type="button"
                                         onClick={() => setNewType(type)}
-                                        className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${newType === type ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white" : "text-zinc-500"}`}
+                                        className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${newType === type ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
                                     >
                                         {type === "scale" ? <Hash className="h-3.5 w-3.5" /> : <Type className="h-3.5 w-3.5" />}
                                         {type === "scale" ? "Scale" : "Text"}
@@ -687,17 +679,14 @@ export default function QuestionsPage() {
                     </div>
                 )}
             >
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Category Name</label>
-                    <input
-                        autoFocus
-                        value={categoryName}
-                        onChange={(e) => setCategoryName(e.target.value)}
-                        placeholder="e.g. Communication, Leadership, Technical"
-                        className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:focus:ring-zinc-100"
-                        onKeyDown={(e) => { if (e.key === "Enter") handleSaveCategory(); }}
-                    />
-                </div>
+                <Input
+                    autoFocus
+                    label="Category Name"
+                    value={categoryName}
+                    onChange={(e) => setCategoryName(e.target.value)}
+                    placeholder="e.g. Communication, Leadership, Technical"
+                    onKeyDown={(e) => { if (e.key === "Enter") handleSaveCategory(); }}
+                />
             </Modal>
 
             {/* Delete Category Modal */}
@@ -723,8 +712,8 @@ export default function QuestionsPage() {
                 )}
             >
                 <div className="space-y-4">
-                    <div className="rounded-xl bg-red-50 dark:bg-red-900/20 p-4">
-                        <p className="text-sm text-red-700 dark:text-red-300">
+                    <div className="rounded-lg bg-destructive/10 p-4">
+                        <p className="text-sm text-destructive">
                             This will permanently delete the category <strong>&quot;{deletingCategory?.name}&quot;</strong>. All questions in this category must be reassigned.
                         </p>
                     </div>
@@ -740,7 +729,7 @@ export default function QuestionsPage() {
                             ))}
                         </Select>
                     ) : (
-                        <p className="text-sm text-zinc-500">You need at least one other category to reassign questions to.</p>
+                        <p className="text-sm text-muted-foreground">You need at least one other category to reassign questions to.</p>
                     )}
                 </div>
             </Modal>
@@ -755,7 +744,7 @@ export default function QuestionsPage() {
                 className="max-h-[90vh] flex flex-col"
                 footer={(
                     <div className="flex justify-between w-full items-center">
-                        <p className="text-sm text-zinc-500">{selectedQuestionIds.length} questions selected</p>
+                        <p className="text-sm text-muted-foreground">{selectedQuestionIds.length} questions selected</p>
                         <div className="flex gap-3">
                             <Button variant="ghost" type="button" onClick={resetPresetForm}>
                                 Cancel
@@ -785,7 +774,7 @@ export default function QuestionsPage() {
                         <div className="space-y-3 flex flex-col h-72 md:h-full">
                             <label className="text-sm font-medium">Available Questions</label>
                             <Input placeholder="Search questions..." className="mb-2" />
-                            <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar border rounded-xl p-2">
+                            <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar border border-border rounded-lg p-2">
                                 {questions.map(q => {
                                     const isSelected = selectedQuestionIds.includes(q.id);
                                     return (
@@ -800,9 +789,9 @@ export default function QuestionsPage() {
                                                 }
                                                 setSelectedQuestionIds(next);
                                             }}
-                                            className={`p-3 rounded-xl border flex gap-3 cursor-pointer transition-all ${isSelected ? "bg-zinc-50 border-zinc-300 dark:bg-zinc-800/50 dark:border-zinc-700" : "hover:border-zinc-400 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"}`}
+                                            className={`p-3 rounded-lg border flex gap-3 cursor-pointer transition-all ${isSelected ? "bg-muted border-border" : "hover:border-border bg-card border-border"}`}
                                         >
-                                            <div className={`h-4 w-4 rounded-md border flex items-center justify-center flex-shrink-0 ${isSelected ? "bg-zinc-900 border-zinc-900 text-white dark:bg-white dark:border-white dark:text-zinc-900" : "border-zinc-300 dark:border-zinc-600"}`}>
+                                            <div className={`h-4 w-4 rounded-md border flex items-center justify-center flex-shrink-0 ${isSelected ? "bg-foreground border-foreground text-background" : "border-border"}`}>
                                                 {isSelected && <Check className="h-3 w-3" />}
                                             </div>
                                             <div>
@@ -822,10 +811,10 @@ export default function QuestionsPage() {
                         {/* Right: Selected Questions (Sortable) */}
                         <div className="space-y-3 flex flex-col h-72 md:h-full">
                             <label className="text-sm font-medium">Selected Questions ({selectedQuestionIds.length})</label>
-                            <p className="text-xs text-zinc-400">Drag to reorder</p>
-                            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar border rounded-xl p-2 bg-zinc-50/50 dark:bg-zinc-900/50">
+                            <p className="text-xs text-muted-foreground">Drag to reorder</p>
+                            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar border border-border rounded-lg p-2 bg-muted/50">
                                 {selectedQuestionIds.length === 0 ? (
-                                    <div className="h-full flex items-center justify-center text-zinc-400 text-sm italic">
+                                    <div className="h-full flex items-center justify-center text-muted-foreground text-sm italic">
                                         No questions selected.
                                     </div>
                                 ) : (

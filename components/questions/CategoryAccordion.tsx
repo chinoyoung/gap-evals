@@ -38,9 +38,9 @@ export function CategoryAccordion({
     const textCount = questions.filter((q) => q.type === "paragraph").length;
 
     return (
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden p-0">
             {/* Header — use a div so we don't nest buttons inside a button */}
-            <div className="flex w-full items-center gap-3 px-5 py-4 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/30">
+            <div className="flex w-full items-center gap-3 px-5 py-4 transition-colors hover:bg-muted/30">
                 {/* Clickable toggle area */}
                 <button
                     onClick={onToggle}
@@ -50,12 +50,12 @@ export function CategoryAccordion({
                     <motion.div
                         animate={{ rotate: isExpanded ? 90 : 0 }}
                         transition={{ duration: 0.2, ease: "easeInOut" }}
-                        className="shrink-0 text-zinc-400 dark:text-zinc-500"
+                        className="shrink-0 text-muted-foreground"
                     >
                         <ChevronRight className="h-4 w-4" />
                     </motion.div>
 
-                    <span className="flex-1 font-semibold text-sm text-zinc-900 dark:text-zinc-50 truncate">
+                    <span className="flex-1 font-semibold text-sm text-foreground truncate">
                         {searchQuery ? highlightMatch(category.name, searchQuery) : category.name}
                     </span>
                 </button>
@@ -67,7 +67,7 @@ export function CategoryAccordion({
                     </Badge>
 
                     {(scaleCount > 0 || textCount > 0) && (
-                        <span className="text-[11px] text-zinc-400 dark:text-zinc-500 hidden sm:inline">
+                        <span className="text-[11px] text-muted-foreground hidden sm:inline">
                             {[
                                 scaleCount > 0 && `${scaleCount} scale`,
                                 textCount > 0 && `${textCount} text`,
@@ -96,13 +96,13 @@ export function CategoryAccordion({
                         transition={{ duration: 0.22, ease: "easeInOut" }}
                         className="overflow-hidden"
                     >
-                        <div className="border-t border-zinc-100 dark:border-zinc-800">
+                        <div className="border-t border-border">
                             {questions.length === 0 ? (
-                                <p className="py-8 text-center text-sm text-zinc-400 dark:text-zinc-500">
+                                <p className="py-8 text-center text-sm text-muted-foreground">
                                     No questions in this category
                                 </p>
                             ) : (
-                                <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                                <div className="divide-y divide-border">
                                     {questions.map((question) => (
                                         <QuestionItem
                                             key={question.id}

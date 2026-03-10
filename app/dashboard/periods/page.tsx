@@ -13,7 +13,6 @@ import {
     deleteDoc,
     doc
 } from "firebase/firestore";
-import { motion, AnimatePresence } from "framer-motion";
 import {
     Plus,
     ChevronRight,
@@ -34,7 +33,9 @@ import { Badge } from "@/components/ui/Badge";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
+import { Modal } from "@/components/ui/Modal";
 import { ItemActions } from "@/components/ui/ItemActions";
+import { Separator } from "@/components/ui/separator";
 
 interface Period {
     id: string;
@@ -130,9 +131,9 @@ export default function PeriodsPage() {
     if (!isAdmin) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center">
-                <AlertCircle className="mb-4 h-12 w-12 text-red-500" />
+                <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
                 <h1 className="text-xl font-semibold">Access Denied</h1>
-                <p className="text-zinc-500">Only administrators can manage evaluation periods.</p>
+                <p className="text-muted-foreground">Only administrators can manage evaluation periods.</p>
             </div>
         );
     }
@@ -187,7 +188,7 @@ export default function PeriodsPage() {
                                                 <Button
                                                     variant="danger"
                                                     size="icon"
-                                                    className="bg-transparent hover:bg-red-50"
+                                                    className="bg-transparent hover:bg-destructive/10"
                                                     onClick={(e) => {
                                                         e.preventDefault();
                                                         e.stopPropagation();
@@ -201,15 +202,15 @@ export default function PeriodsPage() {
                                             </ItemActions>
                                         </div>
 
-                                        <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 leading-tight">
+                                        <h3 className="text-xl font-bold text-foreground leading-tight">
                                             {period.name}
                                         </h3>
-                                        <p className="mt-2 text-sm text-zinc-500 line-clamp-2 leading-relaxed">
+                                        <p className="mt-2 text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                                             {period.description || "No description provided."}
                                         </p>
 
-                                        <div className="mt-6 flex flex-wrap gap-4 pt-6 border-t border-zinc-100 dark:border-zinc-800">
-                                            <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
+                                        <div className="mt-6 flex flex-wrap gap-4 pt-6 border-t border-border">
+                                            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                                                 <Calendar className="h-3.5 w-3.5" />
                                                 <span>{period.startDate ? new Date(period.startDate).toLocaleDateString() : 'Set start date'}</span>
                                                 <span>→</span>
@@ -218,7 +219,7 @@ export default function PeriodsPage() {
                                         </div>
 
                                         <div className="absolute bottom-6 right-6 translate-x-0 sm:translate-x-4 opacity-100 sm:opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100">
-                                            <ChevronRight className="h-5 w-5 text-zinc-400" />
+                                            <ChevronRight className="h-5 w-5 text-muted-foreground" />
                                         </div>
                                     </Card>
                                 </Link>
@@ -228,13 +229,14 @@ export default function PeriodsPage() {
 
                     {/* Archived Periods */}
                     {periods.some(p => p.archived) && (
-                        <div className="space-y-6 pt-12 border-t border-zinc-100 dark:border-zinc-800">
-                            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Archived Cycles</h2>
+                        <div className="space-y-6">
+                            <Separator />
+                            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Archived Cycles</h2>
                             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                 {periods.filter(p => p.archived).map((period) => (
-                                    <Card key={period.id} className="bg-zinc-50/50 p-6 ring-zinc-200/50 hover:bg-zinc-50 dark:bg-zinc-900/30 dark:ring-zinc-800/50 group">
+                                    <Card key={period.id} className="bg-muted/30 p-6 group">
                                         <div className="mb-4 flex items-center justify-between">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Archived</span>
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Archived</span>
                                             <ItemActions>
                                                 <Button
                                                     variant="ghost"
@@ -247,7 +249,7 @@ export default function PeriodsPage() {
                                                 <Button
                                                     variant="danger"
                                                     size="icon"
-                                                    className="bg-transparent hover:bg-red-50"
+                                                    className="bg-transparent hover:bg-destructive/10"
                                                     onClick={(e) => {
                                                         e.preventDefault();
                                                         e.stopPropagation();
@@ -260,8 +262,8 @@ export default function PeriodsPage() {
                                                 </Button>
                                             </ItemActions>
                                         </div>
-                                        <h4 className="text-base font-bold text-zinc-500 dark:text-zinc-400">{period.name}</h4>
-                                        <p className="mt-2 text-xs text-zinc-400 line-clamp-1">{period.description}</p>
+                                        <h4 className="text-base font-bold text-muted-foreground">{period.name}</h4>
+                                        <p className="mt-2 text-xs text-muted-foreground line-clamp-1">{period.description}</p>
                                     </Card>
                                 ))}
                             </div>
@@ -271,64 +273,58 @@ export default function PeriodsPage() {
             )}
 
             {/* New Period Modal */}
-            <AnimatePresence>
-                {showNewModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/20 backdrop-blur-sm">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="w-full max-w-lg rounded-3xl bg-white p-8 shadow-2xl dark:bg-zinc-900"
-                        >
-                            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mb-6">Create Evaluation Period</h2>
-                            <form onSubmit={handleCreate} className="space-y-6">
-                                <Input
-                                    label="Period Name"
-                                    required
-                                    value={newName}
-                                    onChange={(e) => setNewName(e.target.value)}
-                                    placeholder="e.g. Q1 2024 Performance Review"
-                                />
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Input
-                                        type="date"
-                                        label="Start Date"
-                                        value={newStart}
-                                        onChange={(e) => setNewStart(e.target.value)}
-                                    />
-                                    <Input
-                                        type="date"
-                                        label="End Date"
-                                        value={newEnd}
-                                        onChange={(e) => setNewEnd(e.target.value)}
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Description</label>
-                                    <textarea
-                                        rows={3}
-                                        value={newDesc}
-                                        onChange={(e) => setNewDesc(e.target.value)}
-                                        placeholder="Brief summary of this evaluation cycle..."
-                                        className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm transition-all focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:border-zinc-700 dark:bg-zinc-800"
-                                    />
-                                </div>
-
-                                <div className="flex justify-end gap-3 pt-4">
-                                    <Button variant="ghost" onClick={() => setShowNewModal(false)}>
-                                        Cancel
-                                    </Button>
-                                    <Button type="submit" loading={isCreating}>
-                                        Create Period
-                                    </Button>
-                                </div>
-                            </form>
-                        </motion.div>
+            <Modal
+                isOpen={showNewModal}
+                onClose={() => { setShowNewModal(false); resetForm(); }}
+                title="Create Evaluation Period"
+                description="Set up a new review cycle with dates and a description."
+                footer={(
+                    <div className="flex justify-end gap-3 w-full">
+                        <Button variant="ghost" onClick={() => { setShowNewModal(false); resetForm(); }}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleCreate} loading={isCreating} disabled={!newName.trim()}>
+                            Create Period
+                        </Button>
                     </div>
                 )}
-            </AnimatePresence>
+            >
+                <form onSubmit={handleCreate} className="space-y-6">
+                    <Input
+                        label="Period Name"
+                        required
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        placeholder="e.g. Q1 2024 Performance Review"
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <Input
+                            type="date"
+                            label="Start Date"
+                            value={newStart}
+                            onChange={(e) => setNewStart(e.target.value)}
+                        />
+                        <Input
+                            type="date"
+                            label="End Date"
+                            value={newEnd}
+                            onChange={(e) => setNewEnd(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Description</label>
+                        <textarea
+                            rows={3}
+                            value={newDesc}
+                            onChange={(e) => setNewDesc(e.target.value)}
+                            placeholder="Brief summary of this evaluation cycle..."
+                            className="w-full rounded-lg border border-input bg-background px-4 py-3 text-sm transition-all focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+                    </div>
+                </form>
+            </Modal>
         </div>
     );
 }

@@ -19,11 +19,9 @@ import {
     Plus,
     Trash2,
     Users,
-    Shield,
     ArrowRight,
     Settings2,
     Save,
-    X,
     AlertCircle,
     Info
 } from "lucide-react";
@@ -36,7 +34,10 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Loading } from "@/components/ui/Loading";
 import { useToast } from "@/components/ui/Toast";
-import { motion, AnimatePresence } from "framer-motion";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { NativeSelect } from "@/components/ui/native-select";
 
 interface Role {
     id: string;
@@ -221,7 +222,7 @@ export default function RolesSettingsPage() {
             <div className="flex flex-col items-center justify-center py-20 text-center">
                 <AlertCircle className="mb-4 h-12 w-12 text-red-500" />
                 <h1 className="text-xl font-semibold">Access Denied</h1>
-                <p className="text-zinc-500">Only administrators can manage roles and workflow.</p>
+                <p className="text-muted-foreground">Only administrators can manage roles and workflow.</p>
             </div>
         );
     }
@@ -244,7 +245,7 @@ export default function RolesSettingsPage() {
                                 <Users className="h-5 w-5 text-indigo-500" />
                                 Organizational Roles
                             </h2>
-                            <p className="text-sm text-zinc-500">Define the roles within your organization.</p>
+                            <p className="text-sm text-muted-foreground">Define the roles within your organization.</p>
                         </div>
                         <Button onClick={() => setShowRoleModal(true)} icon={Plus}>Add Role</Button>
                     </div>
@@ -252,24 +253,30 @@ export default function RolesSettingsPage() {
                     <div className="grid gap-3">
                         {roles.length === 0 ? (
                             <Card className="p-8 text-center border-dashed">
-                                <p className="text-sm text-zinc-500">No roles defined yet.</p>
+                                <p className="text-sm text-muted-foreground">No roles defined yet.</p>
                             </Card>
                         ) : roles.map((r) => (
                             <Card key={r.id} className="p-4 group">
                                 <div className="flex items-start justify-between">
                                     <div className="space-y-1">
                                         <div className="flex items-center gap-2">
-                                            <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">{r.name}</h3>
+                                            <h3 className="text-base font-bold text-foreground">{r.name}</h3>
                                             {r.isAdmin && <Badge variant="amber" icon={ShieldCheck} className="py-0.5 text-[10px]">Admin</Badge>}
                                             {r.canManageTeam && <Badge variant="blue" icon={Settings2} className="py-0.5 text-[10px]">Manager</Badge>}
                                         </div>
-                                        <p className="text-xs text-zinc-500 pr-10">{r.description || "No description provided."}</p>
+                                        <p className="text-xs text-muted-foreground pr-10">{r.description || "No description provided."}</p>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button onClick={() => openEditRole(r)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-500 hover:text-zinc-900">
+                                        <button
+                                            onClick={() => openEditRole(r)}
+                                            className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                                        >
                                             <Save className="h-4 w-4" />
                                         </button>
-                                        <button onClick={() => handleDeleteRole(r.id)} className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-zinc-400 hover:text-red-500">
+                                        <button
+                                            onClick={() => handleDeleteRole(r.id)}
+                                            className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-muted-foreground hover:text-red-500"
+                                        >
                                             <Trash2 className="h-4 w-4" />
                                         </button>
                                     </div>
@@ -287,7 +294,7 @@ export default function RolesSettingsPage() {
                                 <ArrowRight className="h-5 w-5 text-emerald-500" />
                                 Evaluation Workflow
                             </h2>
-                            <p className="text-sm text-zinc-500">Define who reviews whom for the Bulk Wizard.</p>
+                            <p className="text-sm text-muted-foreground">Define who reviews whom for the Bulk Wizard.</p>
                         </div>
                         <Button onClick={() => {
                             if (roles.length < 1) {
@@ -301,7 +308,7 @@ export default function RolesSettingsPage() {
                     <div className="grid gap-3">
                         {relationships.length === 0 ? (
                             <Card className="p-8 text-center border-dashed">
-                                <p className="text-sm text-zinc-500">No relationships defined yet.</p>
+                                <p className="text-sm text-muted-foreground">No relationships defined yet.</p>
                             </Card>
                         ) : relationships.map((rel) => {
                             const reviewer = roles.find(r => r.id === rel.reviewerRoleId);
@@ -312,23 +319,29 @@ export default function RolesSettingsPage() {
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-4">
                                             <div className="space-y-0.5 min-w-[100px]">
-                                                <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 truncate max-w-[120px]">{rel.name}</h3>
+                                                <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground truncate max-w-[120px]">{rel.name}</h3>
                                                 <div className="flex items-center gap-2">
-                                                    <div className="px-2.5 py-1 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 rounded-lg text-[10px] font-bold shadow-sm">
+                                                    <div className="px-2.5 py-1 bg-foreground text-background rounded-lg text-[10px] font-bold shadow-sm">
                                                         {reviewer?.name || "Deleted"}
                                                     </div>
-                                                    <ArrowRight className="h-3 w-3 text-zinc-300" />
-                                                    <div className="px-2.5 py-1 border-2 border-zinc-200 dark:border-zinc-800 rounded-lg text-[10px] font-bold text-zinc-600 dark:text-zinc-400">
+                                                    <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                                                    <div className="px-2.5 py-1 border-2 border-border rounded-lg text-[10px] font-bold text-muted-foreground">
                                                         {reviewee?.name === "self" ? "Self" : (reviewee?.name || "Deleted")}
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="flex gap-2">
-                                            <button onClick={() => openEditRel(rel)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-500 hover:text-zinc-900">
+                                            <button
+                                                onClick={() => openEditRel(rel)}
+                                                className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                                            >
                                                 <Save className="h-4 w-4" />
                                             </button>
-                                            <button onClick={() => handleDeleteRel(rel.id)} className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-zinc-400 hover:text-red-500">
+                                            <button
+                                                onClick={() => handleDeleteRel(rel.id)}
+                                                className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-muted-foreground hover:text-red-500"
+                                            >
                                                 <Trash2 className="h-4 w-4" />
                                             </button>
                                         </div>
@@ -350,45 +363,41 @@ export default function RolesSettingsPage() {
                 <div className="space-y-4 text-left">
                     <div className="space-y-3">
                         <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Role Name</label>
-                            <Input value={roleName} onChange={e => setRoleName(e.target.value)} placeholder="e.g. Senior Developer" className="px-3 py-2 h-10 rounded-xl" />
+                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Role Name</Label>
+                            <Input value={roleName} onChange={e => setRoleName(e.target.value)} placeholder="e.g. Senior Developer" className="px-3 py-2 h-10 rounded-lg" />
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Description</label>
-                            <textarea
+                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Description</Label>
+                            <Textarea
                                 value={roleDesc}
                                 onChange={e => setRoleDesc(e.target.value)}
-                                className="w-full h-20 rounded-xl bg-zinc-50 border-none p-3 text-sm dark:bg-zinc-800 placeholder:text-zinc-400 outline-none focus:ring-1 focus:ring-zinc-900 transition-all dark:focus:ring-zinc-100"
                                 placeholder="..."
+                                className="h-20"
                             />
                         </div>
 
-                        <div className="grid gap-2">
-                            <label
-                                className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${roleCanManage ? "border-zinc-900 bg-zinc-900/5 dark:border-zinc-100 dark:bg-white/5" : "border-zinc-100 dark:border-zinc-800"}`}
-                                onClick={() => setRoleCanManage(!roleCanManage)}
-                            >
-                                <div className={`h-5 w-5 rounded flex items-center justify-center border transition-all ${roleCanManage ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:border-zinc-100 dark:text-zinc-950" : "border-zinc-200 dark:border-zinc-700"}`}>
-                                    {roleCanManage && <Save className="h-3 w-3" />}
-                                </div>
+                        <div className="grid gap-3">
+                            <div className="flex items-center justify-between p-3 rounded-lg border border-border transition-all">
                                 <div>
-                                    <p className="text-xs font-bold">Manage Department</p>
-                                    <p className="text-[10px] text-zinc-500">Access to members and results.</p>
+                                    <p className="text-xs font-bold text-foreground">Manage Department</p>
+                                    <p className="text-[10px] text-muted-foreground">Access to members and results.</p>
                                 </div>
-                            </label>
+                                <Switch
+                                    checked={roleCanManage}
+                                    onCheckedChange={setRoleCanManage}
+                                />
+                            </div>
 
-                            <label
-                                className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${roleIsAdmin ? "border-amber-500 bg-amber-500/5 dark:border-amber-400 dark:bg-amber-400/5" : "border-zinc-100 dark:border-zinc-800"}`}
-                                onClick={() => setRoleIsAdmin(!roleIsAdmin)}
-                            >
-                                <div className={`h-5 w-5 rounded flex items-center justify-center border transition-all ${roleIsAdmin ? "bg-amber-500 border-amber-500 text-white" : "border-zinc-200 dark:border-zinc-700"}`}>
-                                    {roleIsAdmin && <ShieldCheck className="h-3 w-3" />}
-                                </div>
+                            <div className="flex items-center justify-between p-3 rounded-lg border border-border transition-all">
                                 <div>
-                                    <p className="text-xs font-bold">Admin Power</p>
-                                    <p className="text-[10px] text-zinc-500">Full system configuration access.</p>
+                                    <p className="text-xs font-bold text-foreground">Admin Power</p>
+                                    <p className="text-[10px] text-muted-foreground">Full system configuration access.</p>
                                 </div>
-                            </label>
+                                <Switch
+                                    checked={roleIsAdmin}
+                                    onCheckedChange={setRoleIsAdmin}
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -410,38 +419,32 @@ export default function RolesSettingsPage() {
             >
                 <div className="space-y-4 text-left">
                     <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Label</label>
-                        <Input value={relName} onChange={e => setRelName(e.target.value)} placeholder="e.g. Peer Review" className="h-10 rounded-xl px-3" />
+                        <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Label</Label>
+                        <Input value={relName} onChange={e => setRelName(e.target.value)} placeholder="e.g. Peer Review" className="h-10 rounded-lg px-3" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Reviewer Role</label>
-                            <select
-                                value={reviewerRole}
-                                onChange={e => setReviewerRole(e.target.value)}
-                                className="w-full rounded-xl bg-zinc-50 border-none p-3 text-sm dark:bg-zinc-800 outline-none h-10"
-                            >
-                                <option value="">Select...</option>
-                                {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                            </select>
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Reviewee Role</label>
-                            <select
-                                value={revieweeRole}
-                                onChange={e => setRevieweeRole(e.target.value)}
-                                className="w-full rounded-xl bg-zinc-50 border-none p-3 text-sm dark:bg-zinc-800 outline-none h-10"
-                            >
-                                <option value="">Select...</option>
-                                <option value="self">Self (Same)</option>
-                                {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                            </select>
-                        </div>
+                        <NativeSelect
+                            label="Reviewer Role"
+                            value={reviewerRole}
+                            onChange={e => setReviewerRole(e.target.value)}
+                        >
+                            <option value="">Select...</option>
+                            {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                        </NativeSelect>
+                        <NativeSelect
+                            label="Reviewee Role"
+                            value={revieweeRole}
+                            onChange={e => setRevieweeRole(e.target.value)}
+                        >
+                            <option value="">Select...</option>
+                            <option value="self">Self (Same)</option>
+                            {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                        </NativeSelect>
                     </div>
 
-                    <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl flex gap-2 text-[11px] text-zinc-500 leading-tight">
-                        <Info className="h-4 w-4 shrink-0 text-zinc-400" />
+                    <div className="p-3 bg-muted rounded-lg flex gap-2 text-[11px] text-muted-foreground leading-tight">
+                        <Info className="h-4 w-4 shrink-0 text-muted-foreground" />
                         <p>This rule defines the relationship in the Bulk Wizard.</p>
                     </div>
                 </div>

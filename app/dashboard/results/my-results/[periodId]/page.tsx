@@ -177,14 +177,14 @@ export default function MyResultsDetailPage() {
 
     const getTypeColor = (type: string) => {
         switch (type) {
-            case 'Self': return { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400', badge: 'blue' as const, glass: 'bg-blue-500/10' };
-            case 'Manager to Member': return { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-600 dark:text-amber-400', badge: 'amber' as const, glass: 'bg-amber-500/10' };
-            case 'Member to Manager': return { bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-600 dark:text-rose-400', badge: 'red' as const, glass: 'bg-rose-500/10' };
-            case 'Lead to Member': return { bg: 'bg-indigo-50 dark:bg-indigo-900/20', text: 'text-indigo-600 dark:text-indigo-400', badge: 'indigo' as const, glass: 'bg-indigo-500/10' };
-            case 'Member to Lead': return { bg: 'bg-violet-50 dark:bg-violet-900/20', text: 'text-violet-600 dark:text-violet-400', badge: 'indigo' as const, glass: 'bg-violet-500/10' };
-            case 'Lead to Manager': return { bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-600 dark:text-rose-400', badge: 'red' as const, glass: 'bg-rose-500/10' };
-            case 'Manager to Lead': return { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-600 dark:text-amber-400', badge: 'amber' as const, glass: 'bg-amber-500/10' };
-            default: return { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400', badge: 'emerald' as const, glass: 'bg-emerald-500/10' };
+            case 'Self': return { badge: 'blue' as const };
+            case 'Manager to Member': return { badge: 'amber' as const };
+            case 'Member to Manager': return { badge: 'red' as const };
+            case 'Lead to Member': return { badge: 'indigo' as const };
+            case 'Member to Lead': return { badge: 'indigo' as const };
+            case 'Lead to Manager': return { badge: 'red' as const };
+            case 'Manager to Lead': return { badge: 'amber' as const };
+            default: return { badge: 'emerald' as const };
         }
     };
 
@@ -197,7 +197,7 @@ export default function MyResultsDetailPage() {
             <div>
                 <Link
                     href="/dashboard/results/my-results"
-                    className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors mb-6"
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-6"
                 >
                     <ArrowLeft className="h-4 w-4" />
                     Back to My Results
@@ -219,32 +219,28 @@ export default function MyResultsDetailPage() {
             ) : (
                 <div className="space-y-6">
                     {Object.values(groupedResults).map((group) => (
-                        <Card key={group.type} className="overflow-hidden p-0 border-none shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-800">
+                        <Card key={group.type} className="overflow-hidden p-0 border-border shadow-sm">
                             <button
                                 onClick={() => setExpandedType(expandedType === group.type ? null : group.type)}
-                                className="flex w-full items-center justify-between p-6 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer"
+                                className="flex w-full items-center justify-between p-6 text-left transition-colors hover:bg-muted/50 cursor-pointer"
                             >
                                 <div className="flex items-center gap-5">
-                                    <div className={cn(
-                                        "flex h-12 w-12 items-center justify-center rounded-2xl shadow-lg shadow-zinc-900/10",
-                                        getTypeColor(group.type).text,
-                                        getTypeColor(group.type).bg
-                                    )}>
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-muted-foreground shadow-sm">
                                         <BarChart3 className="h-6 w-6" />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-bold capitalize text-zinc-900 dark:text-zinc-50 tracking-tight">
+                                        <h3 className="text-lg font-bold capitalize text-foreground tracking-tight">
                                             {group.type.replace(/-/g, " ")} Feedback
                                         </h3>
                                         <div className="mt-1 flex items-center gap-2">
                                             <Badge variant={getTypeColor(group.type).badge}>
                                                 {group.count} {group.count === 1 ? 'evaluation' : 'evaluations'}
                                             </Badge>
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Anonymous</span>
+                                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Anonymous</span>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-50 text-zinc-400 dark:bg-zinc-800">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
                                     {expandedType === group.type ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
                                 </div>
                             </button>
@@ -256,13 +252,13 @@ export default function MyResultsDetailPage() {
                                         animate={{ height: "auto", opacity: 1 }}
                                         exit={{ height: 0, opacity: 0 }}
                                         transition={{ duration: 0.3, ease: "easeInOut" }}
-                                        className="overflow-hidden border-t border-zinc-100 dark:border-zinc-800"
+                                        className="overflow-hidden border-t border-border"
                                     >
-                                        <div className="p-8 space-y-12 bg-white dark:bg-zinc-900">
+                                        <div className="p-8 space-y-12 bg-card">
                                             {/* Scale Averages */}
                                             {questions.filter(q => q.type === "scale").length > 0 && (
                                                 <div className="space-y-8">
-                                                    <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+                                                    <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                                                         <TrendingUp className="h-3.5 w-3.5" />
                                                         Aggregated Ratings
                                                     </h4>
@@ -271,28 +267,28 @@ export default function MyResultsDetailPage() {
                                                             const avg = group.averages[q.id];
                                                             if (avg === undefined) return null;
                                                             return (
-                                                                <div key={q.id} className="group/item">
+                                                                <div key={q.id}>
                                                                     <div className="flex justify-between items-end mb-3">
-                                                                        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 pr-4 leading-relaxed">
+                                                                        <p className="text-sm font-bold text-foreground pr-4 leading-relaxed">
                                                                             {q.text}
                                                                         </p>
-                                                                        <span className="text-xl font-black text-zinc-900 dark:text-white tabular-nums">
+                                                                        <span className="text-xl font-black text-foreground tabular-nums">
                                                                             {avg}
                                                                         </span>
                                                                     </div>
-                                                                    <div className="relative h-2.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                                                                    <div className="relative h-2.5 w-full rounded-full bg-muted overflow-hidden">
                                                                         <motion.div
                                                                             initial={{ width: 0 }}
                                                                             animate={{ width: `${avg * 10}%` }}
-                                                                            className="h-full bg-zinc-900 dark:bg-white rounded-full"
+                                                                            className="h-full bg-foreground rounded-full"
                                                                         />
                                                                     </div>
 
                                                                     {/* Scale Comments */}
                                                                     {group.comments[`${q.id}_comment`] && group.comments[`${q.id}_comment`].length > 0 && (
-                                                                        <div className="mt-4 space-y-2 pl-4 border-l-2 border-zinc-100 dark:border-zinc-800">
+                                                                        <div className="mt-4 space-y-2 pl-4 border-l-2 border-border">
                                                                             {group.comments[`${q.id}_comment`].map((c, idx) => (
-                                                                                <p key={idx} className="text-xs italic text-zinc-500 leading-relaxed font-medium transition-colors hover:text-zinc-700 dark:hover:text-zinc-300">
+                                                                                <p key={idx} className="text-xs italic text-muted-foreground leading-relaxed font-medium hover:text-foreground transition-colors">
                                                                                     "{c}"
                                                                                 </p>
                                                                             ))}
@@ -308,7 +304,7 @@ export default function MyResultsDetailPage() {
                                             {/* Paragraph Comments */}
                                             {questions.filter(q => q.type === "paragraph").length > 0 && group.type === "Self" && (
                                                 <div className="space-y-8">
-                                                    <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+                                                    <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                                                         <MessageSquare className="h-3.5 w-3.5" />
                                                         Detailed Insights
                                                     </h4>
@@ -318,13 +314,13 @@ export default function MyResultsDetailPage() {
                                                             if (!comments || comments.length === 0) return null;
                                                             return (
                                                                 <div key={q.id} className="space-y-4">
-                                                                    <h5 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                                                                    <h5 className="text-sm font-bold text-foreground">
                                                                         {q.text}
                                                                     </h5>
                                                                     <div className="grid gap-4 sm:grid-cols-2">
                                                                         {comments.map((comment, i) => (
-                                                                            <div key={i} className="relative rounded-2xl bg-zinc-50 p-5 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800/50 hover:border-zinc-200 dark:hover:border-zinc-700 transition-colors">
-                                                                                <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400 font-medium">
+                                                                            <div key={i} className="relative rounded-lg bg-muted/50 p-5 border border-border hover:border-border/80 transition-colors">
+                                                                                <p className="text-sm leading-relaxed text-muted-foreground font-medium">
                                                                                     "{comment}"
                                                                                 </p>
                                                                             </div>

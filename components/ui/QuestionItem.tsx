@@ -1,7 +1,7 @@
 import { Hash, Type, GripVertical, Edit2, Trash2 } from "lucide-react";
-import { Badge } from "./Badge";
-import { Button } from "./Button";
-import { ItemActions } from "./ItemActions";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { ItemActions } from "@/components/ui/ItemActions";
 import { cn } from "@/lib/utils";
 
 export interface Question {
@@ -35,8 +35,8 @@ export function QuestionItem({
     return (
         <div
             className={cn(
-                "group flex items-center justify-between p-4 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50",
-                isDragging && "bg-white shadow-xl dark:bg-zinc-900 border-x border-zinc-200 dark:border-zinc-800 relative z-50",
+                "group flex items-center justify-between p-4 transition-colors hover:bg-muted/50",
+                isDragging && "bg-card shadow-xl border-x border-border relative z-50",
                 className
             )}
         >
@@ -45,7 +45,7 @@ export function QuestionItem({
                     <div
                         {...dragHandleProps}
                         className={cn(
-                            "text-zinc-300 hover:text-zinc-600 dark:text-zinc-700 dark:hover:text-zinc-400 active:cursor-grabbing",
+                            "text-muted-foreground/50 hover:text-muted-foreground active:cursor-grabbing",
                             dragHandleProps ? "cursor-grab" : "cursor-default"
                         )}
                     >
@@ -53,20 +53,19 @@ export function QuestionItem({
                     </div>
                 )}
                 <div className={cn(
-                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl whitespace-nowrap",
-                    question.type === "scale" ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600",
-                    "dark:bg-zinc-800"
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg whitespace-nowrap",
+                    question.type === "scale" ? "bg-blue-50 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400" : "bg-purple-50 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400",
                 )}>
                     {question.type === "scale" ? <Hash className="h-3.5 w-3.5" /> : <Type className="h-3.5 w-3.5" />}
                 </div>
                 <div>
-                    <h4 className="font-medium text-sm text-zinc-900 dark:text-zinc-50 line-clamp-2">{question.text}</h4>
+                    <h4 className="font-medium text-sm text-foreground line-clamp-2">{question.text}</h4>
                     <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{question.type}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{question.type}</span>
                         {question.scope === 'self' && (
                             <>
-                                <span className="h-1 w-1 rounded-full bg-zinc-300" />
-                                <Badge variant="amber" className="px-1.5 border-none bg-amber-500/10">Self Only</Badge>
+                                <span className="h-1 w-1 rounded-full bg-border" />
+                                <Badge variant="amber" className="px-1.5 border-none">Self Only</Badge>
                             </>
                         )}
                     </div>
@@ -83,7 +82,7 @@ export function QuestionItem({
                     <Button
                         variant="danger"
                         size="icon"
-                        className="bg-transparent hover:bg-red-50"
+                        className="bg-transparent"
                         onClick={() => onDelete(question.id)}
                     >
                         <Trash2 className="h-4 w-4" />

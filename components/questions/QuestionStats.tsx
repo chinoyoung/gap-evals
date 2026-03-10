@@ -18,14 +18,14 @@ function StatCard({ icon, count, label }: StatCardProps) {
     return (
         <Card className="px-5 py-4">
             <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                     {icon}
                 </div>
                 <div>
-                    <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 leading-none">
+                    <p className="text-2xl font-bold text-foreground leading-none">
                         {count}
                     </p>
-                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{label}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{label}</p>
                 </div>
             </div>
         </Card>

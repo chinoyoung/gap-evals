@@ -8,7 +8,6 @@ import {
     getDocs,
     query,
     where,
-    orderBy
 } from "firebase/firestore";
 import { motion } from "framer-motion";
 import {
@@ -17,22 +16,9 @@ import {
     CheckCircle2,
     Clock,
     ArrowRight,
-    Loader2,
     Calendar
 } from "lucide-react";
 import Link from "next/link";
-
-interface Assignment {
-    id: string;
-    periodId: string;
-    periodName: string;
-    evaluatorId: string;
-    evaluateeId: string;
-    evaluateeName: string;
-    type: string;
-    status: "pending" | "completed";
-    createdAt: any;
-}
 
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -128,8 +114,10 @@ export default function EvaluationsPage() {
                         >
                             <Card className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 group">
                                 <div className="flex items-center gap-6">
-                                    <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${a.status === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
-                                        } dark:bg-zinc-800 transition-colors group-hover:scale-105 duration-300`}>
+                                    <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-lg ${a.status === 'completed'
+                                            ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50'
+                                            : 'bg-amber-50 text-amber-600 dark:bg-amber-950/50'
+                                        } transition-colors group-hover:scale-105 duration-300`}>
                                         {a.status === 'completed' ? <CheckCircle2 className="h-7 w-7" /> : <Clock className="h-7 w-7" />}
                                     </div>
                                     <div className="min-w-0">
@@ -141,21 +129,21 @@ export default function EvaluationsPage() {
                                             />
                                             <div className="flex-1">
                                                 <div className="flex items-center justify-between">
-                                                    <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                                                    <h3 className="text-lg font-bold text-foreground">
                                                         {a.evaluateeName}
                                                     </h3>
                                                 </div>
-                                                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                                                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                                     <span>{users.find(u => u.id === a.evaluateeId)?.role || "Member"}</span>
-                                                    <span className="h-1 w-1 rounded-full bg-zinc-300" />
+                                                    <span className="h-1 w-1 rounded-full bg-border" />
                                                     <span>{users.find(u => u.id === a.evaluateeId)?.department || "No Dept"}</span>
-                                                    <span className="h-1 w-1 rounded-full bg-zinc-300" />
-                                                    <span className="text-zinc-500 truncate max-w-[150px]">{a.periodName}</span>
+                                                    <span className="h-1 w-1 rounded-full bg-border" />
+                                                    <span className="text-muted-foreground truncate max-w-[150px]">{a.periodName}</span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="mt-2 flex flex-wrap items-center gap-4 text-xs font-semibold text-zinc-500">
-                                            <Badge variant="zinc">
+                                        <div className="mt-2 flex flex-wrap items-center gap-4 text-xs font-semibold text-muted-foreground">
+                                            <Badge variant="secondary">
                                                 {a.periodName || "Active Period"}
                                             </Badge>
                                             <span className="flex items-center gap-1.5 uppercase tracking-widest text-[10px]">
@@ -168,7 +156,7 @@ export default function EvaluationsPage() {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 md:pt-0 md:border-0 justify-between md:justify-end">
+                                <div className="flex items-center gap-4 pt-4 border-t border-border md:pt-0 md:border-0 justify-between md:justify-end">
                                     <Badge variant={a.status === 'completed' ? 'emerald' : 'amber'}>
                                         {a.status}
                                     </Badge>
@@ -176,13 +164,13 @@ export default function EvaluationsPage() {
                                     {a.status === "pending" ? (
                                         <Link
                                             href={`/dashboard/evaluations/${a.periodId}/${a.id}`}
-                                            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-900 text-white shadow-lg shadow-zinc-900/10 transition-all hover:bg-zinc-800 hover:scale-110 active:scale-95 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200"
+                                            className="flex h-12 w-12 items-center justify-center rounded-lg bg-foreground text-background shadow-lg transition-all hover:bg-foreground/90 hover:scale-110 active:scale-95"
                                         >
                                             <ArrowRight className="h-6 w-6" />
                                         </Link>
                                     ) : (
                                         <div className="h-12 w-12 flex items-center justify-center">
-                                            <CheckCircle2 className="h-6 w-6 text-zinc-300 dark:text-zinc-700" />
+                                            <CheckCircle2 className="h-6 w-6 text-muted-foreground/40" />
                                         </div>
                                     )}
                                 </div>

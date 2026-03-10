@@ -22,7 +22,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     Loader2,
     Settings,
-    FileText,
     Users,
     ChevronLeft,
     Save,
@@ -30,13 +29,11 @@ import {
     AlertCircle,
     CheckCircle2,
     Check,
-    Calendar,
     Plus,
     Trash2,
     Hash,
     Type,
     Search,
-    UserPlus,
     RotateCcw,
     X,
     CheckSquare,
@@ -50,6 +47,9 @@ import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Avatar } from "@/components/ui/Avatar";
+import { Input } from "@/components/ui/Input";
+import { Badge } from "@/components/ui/Badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 // Reuse components from old questions page if possible, but keep local for simplicity for now
 import { QuestionItem, Question } from "@/components/ui/QuestionItem";
@@ -594,7 +594,7 @@ export default function PeriodDetailPage() {
     if (loading) {
         return (
             <div className="flex h-96 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
         );
     }
@@ -602,9 +602,9 @@ export default function PeriodDetailPage() {
     if (!period) {
         return (
             <div className="py-20 text-center">
-                <AlertCircle className="mx-auto mb-4 h-12 w-12 text-zinc-300" />
+                <AlertCircle className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                 <h2 className="text-xl font-bold">Period not found</h2>
-                <Link href="/dashboard/periods" className="mt-4 text-zinc-900 underline">Back to Periods</Link>
+                <Link href="/dashboard/periods" className="mt-4 text-foreground underline">Back to Periods</Link>
             </div>
         );
     }
@@ -615,115 +615,97 @@ export default function PeriodDetailPage() {
                 <div className="flex items-center gap-4">
                     <Link
                         href="/dashboard/periods"
-                        className="rounded-xl p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 transition-all dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                        className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-all"
                     >
                         <ChevronLeft className="h-5 w-5" />
                     </Link>
                     <div>
                         <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{period.name}</h1>
-                            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${period.status === 'published'
-                                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400'
-                                : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-                                }`}>
+                            <h1 className="text-2xl font-bold text-foreground">{period.name}</h1>
+                            <Badge variant={period.status === 'published' ? 'emerald' : 'secondary'}>
                                 {period.status}
-                            </span>
+                            </Badge>
                         </div>
-                        <p className="text-sm text-zinc-500">Cycle Management</p>
+                        <p className="text-sm text-muted-foreground">Cycle Management</p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button
+                    <Button
+                        variant="destructive"
                         onClick={handleDeletePeriod}
-                        className="flex cursor-pointer items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-600 transition-all hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                        icon={Trash2}
                     >
-                        <Trash2 className="h-4 w-4" />
                         Delete
-                    </button>
+                    </Button>
                     {period.status === 'draft' ? (
-                        <button
+                        <Button
                             onClick={handlePublish}
                             disabled={isSaving}
-                            className="flex cursor-pointer items-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white transition-all hover:bg-emerald-700 disabled:opacity-50"
+                            loading={isSaving}
+                            icon={Send}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
                         >
-                            <Send className="h-4 w-4" />
                             Publish Period
-                        </button>
+                        </Button>
                     ) : (
-                        <button
+                        <Button
                             onClick={handleUnpublish}
                             disabled={isSaving}
-                            className="flex cursor-pointer items-center gap-2 rounded-xl bg-amber-600 px-6 py-2.5 text-sm font-bold text-white transition-all hover:bg-amber-700 disabled:opacity-50"
+                            loading={isSaving}
+                            icon={RotateCcw}
+                            className="bg-amber-600 hover:bg-amber-700 text-white"
                         >
-                            <RotateCcw className="h-4 w-4" />
                             Unpublish Period
-                        </button>
+                        </Button>
                     )}
-                    <button
+                    <Button
                         onClick={handleSaveSettings}
                         disabled={isSaving}
-                        className="flex cursor-pointer items-center gap-2 rounded-xl bg-zinc-900 px-6 py-2.5 text-sm font-bold text-white transition-all hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200"
+                        loading={isSaving}
+                        icon={Save}
                     >
-                        {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         Save Changes
-                    </button>
+                    </Button>
                 </div>
             </header>
 
-            {/* Tabs */}
-            <div className="flex border-b border-zinc-200 dark:border-zinc-800 overflow-x-auto scrollbar-hide">
-                {[
-                    { id: "settings", label: "Overview", icon: Settings },
-                    { id: "assignments", label: `Assignments (${assignments.length})`, icon: Users },
-                ].map((tab) => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id as any)}
-                        className={`group flex min-w-fit items-center gap-2 border-b-2 px-6 py-4 text-sm font-semibold transition-all cursor-pointer ${activeTab === tab.id
-                            ? "border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-50"
-                            : "border-transparent text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
-                            }`}
-                    >
-                        <tab.icon className={`h-4 w-4 transition-colors ${activeTab === tab.id ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-300 group-hover:text-zinc-500"}`} />
-                        {tab.label}
-                    </button>
-                ))}
-            </div>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+                <TabsList variant="line">
+                    <TabsTrigger value="settings">
+                        <Settings className="h-4 w-4" />
+                        Overview
+                    </TabsTrigger>
+                    <TabsTrigger value="assignments">
+                        <Users className="h-4 w-4" />
+                        Assignments ({assignments.length})
+                    </TabsTrigger>
+                </TabsList>
 
-            <main className="min-h-[400px]">
-                {activeTab === "settings" && (
+                <div className="min-h-[400px] mt-6">
+                <TabsContent value="settings">
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl space-y-8">
-                        <section className="space-y-6 rounded-3xl bg-white p-8 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800">
+                        <section className="space-y-6 rounded-lg bg-card p-8 shadow-sm ring-1 ring-border">
                             <div className="space-y-4">
-                                <label className="text-sm font-bold uppercase tracking-widest text-zinc-400">Basic Information</label>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Period Name</label>
-                                    <input
-                                        value={settingName}
-                                        onChange={(e) => setSettingName(e.target.value)}
-                                        className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 transition-all"
-                                    />
-                                </div>
+                                <label className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Basic Information</label>
+                                <Input
+                                    label="Period Name"
+                                    value={settingName}
+                                    onChange={(e) => setSettingName(e.target.value)}
+                                />
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium">Start Date</label>
-                                        <input
-                                            type="date"
-                                            value={settingStart}
-                                            onChange={(e) => setSettingStart(e.target.value)}
-                                            className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-800"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium">End Date</label>
-                                        <input
-                                            type="date"
-                                            value={settingEnd}
-                                            onChange={(e) => setSettingEnd(e.target.value)}
-                                            className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-800"
-                                        />
-                                    </div>
+                                    <Input
+                                        type="date"
+                                        label="Start Date"
+                                        value={settingStart}
+                                        onChange={(e) => setSettingStart(e.target.value)}
+                                    />
+                                    <Input
+                                        type="date"
+                                        label="End Date"
+                                        value={settingEnd}
+                                        onChange={(e) => setSettingEnd(e.target.value)}
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Description</label>
@@ -731,15 +713,15 @@ export default function PeriodDetailPage() {
                                         rows={4}
                                         value={settingDesc}
                                         onChange={(e) => setSettingDesc(e.target.value)}
-                                        className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm focus:border-zinc-900 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 transition-all"
+                                        className="w-full rounded-lg border border-input bg-background px-4 py-3 text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring transition-all"
                                     />
                                 </div>
                             </div>
                         </section>
 
-                        <section className="rounded-3xl bg-emerald-50 p-8 border border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/20">
+                        <section className="rounded-lg bg-emerald-50 p-8 border border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/20">
                             <div className="flex gap-4">
-                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30">
                                     <CheckCircle2 className="h-6 w-6" />
                                 </div>
                                 <div>
@@ -753,64 +735,62 @@ export default function PeriodDetailPage() {
                             </div>
                         </section>
                     </motion.div>
-                )}
+                </TabsContent>
 
-
-
-                {activeTab === "assignments" && (
+                <TabsContent value="assignments">
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <button
+                                <Button
                                     onClick={() => setShowBulkModal(true)}
-                                    className="flex cursor-pointer items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
+                                    icon={Users}
                                 >
-                                    <Users className="h-4 w-4" />
                                     Assign Evaluations
-                                </button>
-                                <button
+                                </Button>
+                                <Button
+                                    variant="outline"
                                     onClick={handleAssignAllSelf}
                                     disabled={isGenerating}
-                                    className="flex cursor-pointer items-center gap-2 rounded-xl bg-white border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-600 transition-all hover:bg-zinc-50 hover:text-zinc-900 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:text-zinc-100"
+                                    icon={UserCircle}
                                 >
-                                    <UserCircle className="h-4 w-4" />
                                     Assign All Self
-                                </button>
+                                </Button>
                                 <button
                                     onClick={() => {
                                         const evaluators = Array.from(new Set(assignments.map(a => a.evaluatorId)));
                                         setExpandedEvaluators(new Set(evaluators));
                                     }}
-                                    className="text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                                    className="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
                                 >
                                     Expand All
                                 </button>
-                                <span className="text-zinc-200 dark:text-zinc-800">|</span>
+                                <span className="text-border">|</span>
                                 <button
                                     onClick={() => setExpandedEvaluators(new Set())}
-                                    className="text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                                    className="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
                                 >
                                     Collapse All
                                 </button>
                                 {assignmentSelection.size > 0 && (
-                                    <button
+                                    <Button
+                                        variant="destructive"
                                         onClick={handleBatchDeleteAssignments}
-                                        className="flex cursor-pointer items-center gap-2 rounded-xl bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition-all hover:bg-red-100 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20"
+                                        icon={Trash2}
+                                        size="sm"
                                     >
-                                        <Trash2 className="h-4 w-4" />
                                         Delete Selected ({assignmentSelection.size})
-                                    </button>
+                                    </Button>
                                 )}
                             </div>
                         </div>
 
-                        <div className="overflow-x-auto rounded-3xl bg-white shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800">
+                        <div className="overflow-x-auto rounded-lg bg-card shadow-sm ring-1 ring-border">
                             {assignments.length === 0 ? (
                                 <div className="py-20 text-center">
-                                    <p className="text-zinc-500">No assignments created for this period.</p>
+                                    <p className="text-muted-foreground">No assignments created for this period.</p>
                                 </div>
                             ) : (
-                                <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                                <div className="divide-y divide-border">
                                     {Object.entries(
                                         assignments.reduce((acc, a) => {
                                             if (!acc[a.evaluatorId]) acc[a.evaluatorId] = { name: a.evaluatorName, items: [] };
@@ -830,7 +810,7 @@ export default function PeriodDetailPage() {
                                                         if (isExpanded) next.delete(evalId); else next.add(evalId);
                                                         setExpandedEvaluators(next);
                                                     }}
-                                                    className="group flex items-center justify-between bg-zinc-50/50 px-6 py-4 hover:bg-zinc-50 dark:bg-zinc-950/20 dark:hover:bg-zinc-950/40 cursor-pointer transition-colors"
+                                                    className="group flex items-center justify-between bg-muted/30 px-6 py-4 hover:bg-muted/50 cursor-pointer transition-colors"
                                                 >
                                                     <div className="flex items-center gap-4">
                                                         <button
@@ -844,12 +824,12 @@ export default function PeriodDetailPage() {
                                                                 }
                                                                 setAssignmentSelection(next);
                                                             }}
-                                                            className="text-zinc-300 hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
+                                                            className="text-muted-foreground hover:text-foreground transition-colors"
                                                         >
                                                             {groupSelected ? (
-                                                                <CheckSquare className="h-5 w-5 text-zinc-900 dark:text-zinc-50" />
+                                                                <CheckSquare className="h-5 w-5 text-foreground" />
                                                             ) : someSelected ? (
-                                                                <div className="h-5 w-5 rounded border-2 border-zinc-400 bg-zinc-400 flex items-center justify-center">
+                                                                <div className="h-5 w-5 rounded border-2 border-muted-foreground bg-muted-foreground flex items-center justify-center">
                                                                     <div className="h-0.5 w-3 bg-white" />
                                                                 </div>
                                                             ) : (
@@ -863,19 +843,19 @@ export default function PeriodDetailPage() {
                                                                 size="sm"
                                                             />
                                                             <div>
-                                                                <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{group.name}</h4>
-                                                                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                                                                <h4 className="text-sm font-bold text-foreground">{group.name}</h4>
+                                                                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                                                     <span>{users.find(u => u.uid === evalId)?.role}</span>
-                                                                    <span className="h-1 w-1 rounded-full bg-zinc-300" />
+                                                                    <span className="h-1 w-1 rounded-full bg-border" />
                                                                     <span>{users.find(u => u.uid === evalId)?.department || "No Dept"}</span>
-                                                                    <span className="h-1 w-1 rounded-full bg-zinc-300" />
-                                                                    <span className="text-zinc-500">{group.items.length} Reviewees</span>
+                                                                    <span className="h-1 w-1 rounded-full bg-border" />
+                                                                    <span>{group.items.length} Reviewees</span>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-4">
-                                                        {isExpanded ? <ChevronDown className="h-5 w-5 text-zinc-400" /> : <ChevronRight className="h-5 w-5 text-zinc-400" />}
+                                                        {isExpanded ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
                                                     </div>
                                                 </div>
 
@@ -885,10 +865,10 @@ export default function PeriodDetailPage() {
                                                             initial={{ height: 0, opacity: 0 }}
                                                             animate={{ height: "auto", opacity: 1 }}
                                                             exit={{ height: 0, opacity: 0 }}
-                                                            className="overflow-hidden bg-white dark:bg-zinc-900"
+                                                            className="overflow-hidden bg-card"
                                                         >
-                                                            <table className="w-full text-left border-t border-zinc-100 dark:border-zinc-800">
-                                                                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                                                            <table className="w-full text-left border-t border-border">
+                                                                <tbody className="divide-y divide-border">
                                                                     {group.items.map((a) => (
                                                                         <tr
                                                                             key={a.id}
@@ -897,12 +877,12 @@ export default function PeriodDetailPage() {
                                                                                 if (next.has(a.id)) next.delete(a.id); else next.add(a.id);
                                                                                 setAssignmentSelection(next);
                                                                             }}
-                                                                            className={`group hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer ${assignmentSelection.has(a.id) ? "bg-zinc-50 dark:bg-zinc-800/50" : ""}`}
+                                                                            className={`group hover:bg-muted/50 cursor-pointer ${assignmentSelection.has(a.id) ? "bg-muted/50" : ""}`}
                                                                         >
                                                                             <td className="px-6 py-4 w-10">
-                                                                                <div className="text-zinc-300 hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors pl-8">
+                                                                                <div className="text-muted-foreground hover:text-foreground transition-colors pl-8">
                                                                                     {assignmentSelection.has(a.id) ? (
-                                                                                        <CheckSquare className="h-5 w-5 text-zinc-900 dark:text-zinc-50" />
+                                                                                        <CheckSquare className="h-5 w-5 text-foreground" />
                                                                                     ) : (
                                                                                         <Square className="h-5 w-5" />
                                                                                     )}
@@ -916,17 +896,17 @@ export default function PeriodDetailPage() {
                                                                                         size="sm"
                                                                                     />
                                                                                     <div className="flex flex-col">
-                                                                                        <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.evaluateeName}</div>
-                                                                                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                                                                                        <div className="text-sm font-medium text-foreground">{a.evaluateeName}</div>
+                                                                                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                                                                             <span>{users.find(u => u.uid === a.evaluateeId)?.role}</span>
-                                                                                            <span className="h-1 w-1 rounded-full bg-zinc-300" />
+                                                                                            <span className="h-1 w-1 rounded-full bg-border" />
                                                                                             <span>{users.find(u => u.uid === a.evaluateeId)?.department || "No Dept"}</span>
                                                                                         </div>
                                                                                     </div>
                                                                                 </div>
                                                                             </td>
                                                                             <td className="px-6 py-4">
-                                                                                <span className="text-xs font-medium text-zinc-500">{a.type}</span>
+                                                                                <span className="text-xs font-medium text-muted-foreground">{a.type}</span>
                                                                             </td>
                                                                             <td className="px-6 py-4 text-right">
                                                                                 <button
@@ -934,7 +914,7 @@ export default function PeriodDetailPage() {
                                                                                         e.stopPropagation();
                                                                                         handleDeleteAssignment(a.id);
                                                                                     }}
-                                                                                    className="rounded-lg p-2 text-zinc-400 opacity-100 transition-opacity hover:bg-red-50 hover:text-red-600 cursor-point"
+                                                                                    className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive cursor-pointer"
                                                                                 >
                                                                                     <Trash2 className="h-4 w-4" />
                                                                                 </button>
@@ -953,10 +933,10 @@ export default function PeriodDetailPage() {
                             )}
                         </div>
                     </motion.div>
-                )}
-            </main>
+                </TabsContent>
+                </div>
+            </Tabs>
 
-            {/* Global Library Modal */}
             {/* Questions Library Modal */}
             <Modal
                 isOpen={showLibraryModal}
@@ -966,7 +946,7 @@ export default function PeriodDetailPage() {
                 maxWidth="2xl"
                 footer={(
                     <div className="flex items-center justify-between w-full">
-                        <div className="text-sm font-medium text-zinc-500">
+                        <div className="text-sm font-medium text-muted-foreground">
                             {selectedGlobalIds.size} questions selected
                         </div>
                         <div className="flex gap-3">
@@ -997,15 +977,15 @@ export default function PeriodDetailPage() {
                             <div
                                 key={q.id}
                                 onClick={() => !isAlreadyInPeriod && toggleGlobalSelection(q.id)}
-                                className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${isAlreadyInPeriod
-                                    ? "bg-zinc-50 border-zinc-100 opacity-60 cursor-not-allowed dark:bg-zinc-800/20 dark:border-zinc-800"
+                                className={`flex items-center justify-between p-4 rounded-lg border transition-all ${isAlreadyInPeriod
+                                    ? "bg-muted border-border opacity-60 cursor-not-allowed"
                                     : isSelected
-                                        ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 dark:border-zinc-100 cursor-pointer"
-                                        : "bg-white border-zinc-200 hover:border-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 dark:hover:border-zinc-100 cursor-pointer"
+                                        ? "bg-foreground border-foreground text-background cursor-pointer"
+                                        : "bg-card border-border hover:border-foreground cursor-pointer"
                                     }`}
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isSelected ? "bg-white/10 text-white dark:bg-zinc-800 dark:text-zinc-100" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
+                                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${isSelected ? "bg-background/10 text-background" : "bg-muted text-muted-foreground"
                                         }`}>
                                         {q.type === "scale" ? <Hash className="h-5 w-5" /> : <Type className="h-5 w-5" />}
                                     </div>
@@ -1015,7 +995,7 @@ export default function PeriodDetailPage() {
                                     </div>
                                 </div>
                                 {!isAlreadyInPeriod && (
-                                    <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? "border-white dark:border-zinc-900 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white" : "border-zinc-200 dark:border-zinc-700"
+                                    <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? "border-background bg-background text-foreground" : "border-border"
                                         }`}>
                                         {isSelected && <CheckCircle2 className="h-3 w-3" />}
                                     </div>
@@ -1037,8 +1017,8 @@ export default function PeriodDetailPage() {
                 footer={(
                     <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-4">
                         <div>
-                            <p className="text-[10px] sm:text-xs font-medium text-zinc-500 italic uppercase tracking-wider">
-                                Total assignments to be created: <span className="text-zinc-900 dark:text-zinc-50 font-bold text-sm sm:text-base">
+                            <p className="text-[10px] sm:text-xs font-medium text-muted-foreground italic uppercase tracking-wider">
+                                Total assignments to be created: <span className="text-foreground font-bold text-sm sm:text-base">
                                     {bulkType === "Self" ? bulkReviewers.size : bulkReviewees.size * bulkReviewers.size}
                                 </span>
                             </p>
@@ -1060,33 +1040,31 @@ export default function PeriodDetailPage() {
                     </div>
                 )}
             >
-                <div className="grid grid-cols-1 lg:grid-cols-2 divide-x divide-zinc-100 dark:divide-zinc-800 -m-8 h-[500px]">
+                <div className="grid grid-cols-1 lg:grid-cols-2 divide-x divide-border -m-8 h-[500px]">
                     {/* Left: Select Reviewers */}
                     <div className="p-8 space-y-6 overflow-y-auto">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-[10px] sm:text-sm font-bold uppercase tracking-widest text-zinc-400">1. Select Reviewer ({bulkReviewers.size})</h3>
+                            <h3 className="text-[10px] sm:text-sm font-bold uppercase tracking-widest text-muted-foreground">1. Select Reviewer ({bulkReviewers.size})</h3>
                             <button
                                 onClick={() => setBulkReviewers(new Set())}
-                                className="text-[9px] sm:text-[10px] font-bold uppercase text-zinc-600 hover:underline"
+                                className="text-[9px] sm:text-[10px] font-bold uppercase text-muted-foreground hover:text-foreground hover:underline"
                             >
                                 Clear
                             </button>
                         </div>
 
                         <div className="flex gap-2">
-                            <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                                <input
-                                    placeholder="Search people..."
-                                    value={bulkSearch}
-                                    onChange={e => setBulkSearch(e.target.value)}
-                                    className="w-full rounded-xl bg-zinc-50 pl-10 py-2.5 text-xs border-none focus:ring-1 focus:ring-zinc-900 dark:bg-zinc-800 outline-none"
-                                />
-                            </div>
+                            <Input
+                                icon={Search}
+                                placeholder="Search people..."
+                                value={bulkSearch}
+                                onChange={e => setBulkSearch(e.target.value)}
+                                className="flex-1 text-xs"
+                            />
                             <select
                                 value={bulkDept}
                                 onChange={e => setBulkDept(e.target.value)}
-                                className="rounded-xl bg-zinc-50 border-none text-xs px-3 dark:bg-zinc-800 outline-none"
+                                className="rounded-lg bg-muted border border-border text-xs px-3 outline-none focus:ring-1 focus:ring-ring"
                             >
                                 <option>All</option>
                                 {Array.from(new Set(users.map(u => u.department).filter(Boolean))).map(d => (
@@ -1115,13 +1093,13 @@ export default function PeriodDetailPage() {
                                             if (!isSelected) next.add(u.uid);
                                             setBulkReviewers(next);
                                         }}
-                                        className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${isSelected ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-lg" : "hover:bg-zinc-50 dark:hover:bg-zinc-800"}`}
+                                        className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all ${isSelected ? "bg-foreground text-background shadow-lg" : "hover:bg-muted"}`}
                                     >
                                         <div className="flex items-center gap-3">
                                             <Avatar src={u.photoURL} name={u.displayName} size="sm" />
                                             <div>
                                                 <p className="text-[11px] font-bold">{u.displayName}</p>
-                                                <p className={`text-[9px] font-bold uppercase tracking-wider ${isSelected ? "text-zinc-300" : "text-zinc-400"}`}>
+                                                <p className={`text-[9px] font-bold uppercase tracking-wider ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>
                                                     {u.role} • {u.department || "No Dept"}
                                                 </p>
                                             </div>
@@ -1134,9 +1112,9 @@ export default function PeriodDetailPage() {
                     </div>
 
                     {/* Right: Setup Relationship & Reviewers */}
-                    <div className="p-8 space-y-8 bg-zinc-50/50 dark:bg-zinc-950/20 overflow-y-auto">
+                    <div className="p-8 space-y-8 bg-muted/30 overflow-y-auto">
                         <div className="space-y-4">
-                            <h3 className="text-[10px] sm:text-sm font-bold uppercase tracking-widest text-zinc-400">2. Define Relationship</h3>
+                            <h3 className="text-[10px] sm:text-sm font-bold uppercase tracking-widest text-muted-foreground">2. Define Relationship</h3>
                             <div className="grid grid-cols-2 gap-2">
                                 <button
                                     onClick={() => {
@@ -1144,7 +1122,7 @@ export default function PeriodDetailPage() {
                                         setBulkType("Self");
                                         setBulkReviewees(new Set());
                                     }}
-                                    className={`py-2.5 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-widest border transition-all ${bulkRelId === "self-default" ? "bg-zinc-900 text-white border-zinc-900 shadow-md dark:bg-zinc-100 dark:text-zinc-950" : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-400 dark:bg-zinc-900 dark:border-zinc-800"}`}
+                                    className={`py-2.5 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-widest border transition-all ${bulkRelId === "self-default" ? "bg-foreground text-background border-foreground shadow-md" : "bg-card border-border text-muted-foreground hover:border-foreground"}`}
                                 >
                                     Self Evaluation
                                 </button>
@@ -1158,7 +1136,7 @@ export default function PeriodDetailPage() {
                                         setBulkRelId("peer-default");
                                         setBulkType("Peer to Peer");
                                     }}
-                                    className={`py-2.5 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-widest border transition-all ${bulkRelId === "peer-default" ? "bg-zinc-900 text-white border-zinc-900 shadow-md dark:bg-zinc-100 dark:text-zinc-950" : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-400 dark:bg-zinc-900 dark:border-zinc-800 disabled:opacity-50"}`}
+                                    className={`py-2.5 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-widest border transition-all disabled:opacity-50 ${bulkRelId === "peer-default" ? "bg-foreground text-background border-foreground shadow-md" : "bg-card border-border text-muted-foreground hover:border-foreground"}`}
                                 >
                                     Peer to Peer
                                 </button>
@@ -1185,7 +1163,7 @@ export default function PeriodDetailPage() {
                                                 setBulkType("Self");
                                             }
                                         }}
-                                        className={`py-2.5 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-widest border transition-all ${bulkRelId === rel.id ? "bg-zinc-900 text-white border-zinc-900 shadow-md dark:bg-zinc-100 dark:text-zinc-950" : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-400 dark:bg-zinc-900 dark:border-zinc-800"}`}
+                                        className={`py-2.5 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-widest border transition-all ${bulkRelId === rel.id ? "bg-foreground text-background border-foreground shadow-md" : "bg-card border-border text-muted-foreground hover:border-foreground"}`}
                                     >
                                         {rel.name}
                                     </button>
@@ -1195,10 +1173,10 @@ export default function PeriodDetailPage() {
 
                         {/* 3. Question Preset */}
                         <div className="space-y-4">
-                            <h3 className="text-[10px] sm:text-sm font-bold uppercase tracking-widest text-zinc-400">3. Select Question Set</h3>
+                            <h3 className="text-[10px] sm:text-sm font-bold uppercase tracking-widest text-muted-foreground">3. Select Question Set</h3>
                             <div className="space-y-2">
                                 {presets.length === 0 ? (
-                                    <div className="p-4 rounded-xl border border-dashed border-zinc-200 text-center text-zinc-500 text-xs">
+                                    <div className="p-4 rounded-lg border border-dashed border-border text-center text-muted-foreground text-xs">
                                         No presets found. Create one in the Library.
                                     </div>
                                 ) : (
@@ -1207,13 +1185,13 @@ export default function PeriodDetailPage() {
                                             <div
                                                 key={p.id}
                                                 onClick={() => setBulkPresetId(p.id)}
-                                                className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${bulkPresetId === p.id
-                                                    ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:border-zinc-100 dark:text-zinc-950 shadow-md"
-                                                    : "bg-white border-zinc-200 hover:border-zinc-400 dark:bg-zinc-900 dark:border-zinc-800"}`}
+                                                className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${bulkPresetId === p.id
+                                                    ? "bg-foreground border-foreground text-background shadow-md"
+                                                    : "bg-card border-border hover:border-foreground"}`}
                                             >
                                                 <div>
                                                     <p className="text-xs font-bold">{p.name}</p>
-                                                    {p.description && <p className={`text-[10px] ${bulkPresetId === p.id ? "text-zinc-300 dark:text-zinc-400" : "text-zinc-500"}`}>{p.description}</p>}
+                                                    {p.description && <p className={`text-[10px] ${bulkPresetId === p.id ? "text-background/60" : "text-muted-foreground"}`}>{p.description}</p>}
                                                 </div>
                                                 {bulkPresetId === p.id && <CheckCircle2 className="h-4 w-4" />}
                                             </div>
@@ -1226,10 +1204,10 @@ export default function PeriodDetailPage() {
                         {bulkType !== "Self" && (
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-[10px] sm:text-sm font-bold uppercase tracking-widest text-zinc-400">4. Select Reviewee(s) ({bulkReviewees.size})</h3>
+                                    <h3 className="text-[10px] sm:text-sm font-bold uppercase tracking-widest text-muted-foreground">4. Select Reviewee(s) ({bulkReviewees.size})</h3>
                                     <button
                                         onClick={() => setBulkReviewees(new Set())}
-                                        className="text-[10px] font-bold uppercase text-zinc-400 hover:text-zinc-600"
+                                        className="text-[10px] font-bold uppercase text-muted-foreground hover:text-foreground"
                                     >
                                         Clear
                                     </button>
@@ -1277,13 +1255,13 @@ export default function PeriodDetailPage() {
                                                     if (isSelected) next.delete(u.uid); else next.add(u.uid);
                                                     setBulkReviewees(next);
                                                 }}
-                                                className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${isSelected ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-lg" : "hover:bg-zinc-50 dark:hover:bg-zinc-800"}`}
+                                                className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all ${isSelected ? "bg-foreground text-background shadow-lg" : "hover:bg-muted"}`}
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <Avatar src={u.photoURL} name={u.displayName} size="sm" />
                                                     <div>
                                                         <p className="text-[11px] font-bold">{u.displayName}</p>
-                                                        <p className={`text-[9px] font-bold uppercase tracking-wider ${isSelected ? "text-zinc-300" : "text-zinc-400"}`}>
+                                                        <p className={`text-[9px] font-bold uppercase tracking-wider ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>
                                                             {u.role} • {u.department || "No Dept"}
                                                         </p>
                                                     </div>
@@ -1318,15 +1296,15 @@ export default function PeriodDetailPage() {
                 )}
             >
                 <div className="space-y-6">
-                    <div className="p-4 rounded-xl bg-amber-50 text-amber-800 text-sm border border-amber-100 flex gap-3 items-start">
+                    <div className="p-4 rounded-lg bg-amber-50 text-amber-800 text-sm border border-amber-100 flex gap-3 items-start">
                         <AlertCircle className="h-5 w-5 shrink-0" />
                         <p>This will assign a self-evaluation to all users in the system who do not currently have a "Self" assignment for this period.</p>
                     </div>
 
                     <div className="space-y-3">
-                        <label className="text-sm font-bold uppercase tracking-widest text-zinc-500">Select Question Set</label>
+                        <label className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Select Question Set</label>
                         {presets.length === 0 ? (
-                            <div className="p-4 rounded-xl border border-dashed border-zinc-200 text-center text-zinc-500 text-xs">
+                            <div className="p-4 rounded-lg border border-dashed border-border text-center text-muted-foreground text-xs">
                                 No presets found. Create one in the Library.
                             </div>
                         ) : (
@@ -1335,13 +1313,13 @@ export default function PeriodDetailPage() {
                                     <div
                                         key={p.id}
                                         onClick={() => setSelfAssignPresetId(p.id)}
-                                        className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${selfAssignPresetId === p.id
-                                            ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:border-zinc-100 dark:text-zinc-950 shadow-md"
-                                            : "bg-white border-zinc-200 hover:border-zinc-400 dark:bg-zinc-900 dark:border-zinc-800"}`}
+                                        className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${selfAssignPresetId === p.id
+                                            ? "bg-foreground border-foreground text-background shadow-md"
+                                            : "bg-card border-border hover:border-foreground"}`}
                                     >
                                         <div>
                                             <p className="text-xs font-bold">{p.name}</p>
-                                            {p.description && <p className={`text-[10px] ${selfAssignPresetId === p.id ? "text-zinc-300 dark:text-zinc-400" : "text-zinc-500"}`}>{p.description}</p>}
+                                            {p.description && <p className={`text-[10px] ${selfAssignPresetId === p.id ? "text-background/60" : "text-muted-foreground"}`}>{p.description}</p>}
                                         </div>
                                         {selfAssignPresetId === p.id && <CheckCircle2 className="h-4 w-4" />}
                                     </div>

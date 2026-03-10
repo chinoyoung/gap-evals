@@ -22,7 +22,7 @@ import {
     Calendar,
     ArrowUpRight,
     BookOpen,
-    HelpCircle
+
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
@@ -30,6 +30,7 @@ import { Card } from "@/components/ui/Card";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Avatar } from "@/components/ui/Avatar";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 interface Assignment {
@@ -151,14 +152,14 @@ export default function DashboardOverview() {
             {/* Hero Section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">
                         Good afternoon, {user?.displayName?.split(' ')[0]}
                     </h1>
-                    <p className="mt-2 text-zinc-500 dark:text-zinc-400 font-medium">
+                    <p className="mt-2 text-muted-foreground font-medium">
                         Here's what's happening in your workspace today.
                     </p>
                 </div>
-                <div className="flex items-center gap-2 text-sm font-medium text-zinc-500 bg-white dark:bg-zinc-900 px-4 py-2 rounded-full shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-800">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-card px-4 py-2 rounded-full shadow-sm ring-1 ring-border">
                     <Calendar className="h-4 w-4" />
                     {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 </div>
@@ -170,21 +171,21 @@ export default function DashboardOverview() {
                     <motion.div key={stat.label} variants={item}>
                         <Card className="p-6 relative overflow-hidden group h-full">
                             <div className="flex items-start justify-between mb-4">
-                                <div className={cn("p-3 rounded-2xl transition-colors", stat.bg, stat.color)}>
+                                <div className={cn("p-3 rounded-lg transition-colors", stat.bg, stat.color)}>
                                     <stat.icon className="h-6 w-6" />
                                 </div>
                                 <span className={cn(
                                     "text-xs font-bold px-2 py-1 rounded-full",
-                                    stat.label.includes("Pending") ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                                    stat.label.includes("Pending") ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : "bg-muted text-muted-foreground"
                                 )}>
                                     {stat.trend}
                                 </span>
                             </div>
                             <div>
-                                <h3 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
+                                <h3 className="text-3xl font-bold text-foreground tracking-tight">
                                     {stat.value}
                                 </h3>
-                                <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-1">
+                                <p className="text-sm font-medium text-muted-foreground mt-1">
                                     {stat.label}
                                 </p>
                             </div>
@@ -197,13 +198,13 @@ export default function DashboardOverview() {
                 {/* Active Assignments - Table Style */}
                 <motion.div variants={item} className="xl:col-span-2 space-y-4">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">Active Assignments</h2>
+                        <h2 className="text-xl font-bold text-foreground">Active Assignments</h2>
                         <Link href="/dashboard/evaluations" className="text-sm font-bold text-cobalt-600 hover:text-cobalt-700 transition-colors flex items-center gap-1">
                             View all <ArrowRight className="h-4 w-4" />
                         </Link>
                     </div>
 
-                    <Card className="overflow-hidden border-0 ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
+                    <Card className="overflow-hidden">
                         {activeAssignments.length === 0 ? (
                             <EmptyState
                                 className="py-12"
@@ -212,54 +213,52 @@ export default function DashboardOverview() {
                                 description="You have no pending evaluations."
                             />
                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-zinc-50 dark:bg-zinc-950/50 border-b border-zinc-100 dark:border-zinc-800">
-                                        <tr>
-                                            <th className="px-6 py-4 font-bold text-zinc-500 uppercase tracking-wider text-[10px]">Evaluatee</th>
-                                            <th className="px-6 py-4 font-bold text-zinc-500 uppercase tracking-wider text-[10px]">Type</th>
-                                            <th className="px-6 py-4 font-bold text-zinc-500 uppercase tracking-wider text-[10px]">Status</th>
-                                            <th className="px-6 py-4 font-bold text-zinc-500 uppercase tracking-wider text-[10px] text-right">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
-                                        {activeAssignments.map((assignment) => (
-                                            <tr key={assignment.id} className="group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-colors">
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <Avatar
-                                                            src={users.find(u => u.id === assignment.evaluateeId)?.photoURL}
-                                                            name={assignment.evaluateeName}
-                                                            size="sm"
-                                                        />
-                                                        <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                                                            {assignment.evaluateeName}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300 capitalize">
-                                                        {assignment.type.replace(/-/g, " ")}
+                            <Table>
+                                <TableHeader className="bg-muted border-b border-border">
+                                    <TableRow className="border-0 hover:bg-transparent">
+                                        <TableHead className="px-6 py-4 font-bold text-muted-foreground uppercase tracking-wider text-[10px]">Evaluatee</TableHead>
+                                        <TableHead className="px-6 py-4 font-bold text-muted-foreground uppercase tracking-wider text-[10px]">Type</TableHead>
+                                        <TableHead className="px-6 py-4 font-bold text-muted-foreground uppercase tracking-wider text-[10px]">Status</TableHead>
+                                        <TableHead className="px-6 py-4 font-bold text-muted-foreground uppercase tracking-wider text-[10px] text-right">Action</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {activeAssignments.map((assignment) => (
+                                        <TableRow key={assignment.id} className="hover:bg-muted/50 transition-colors">
+                                            <TableCell className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <Avatar
+                                                        src={users.find(u => u.id === assignment.evaluateeId)?.photoURL}
+                                                        name={assignment.evaluateeName}
+                                                        size="sm"
+                                                    />
+                                                    <span className="font-bold text-foreground">
+                                                        {assignment.evaluateeName}
                                                     </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                                                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                                                        Pending
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <Link href={`/dashboard/evaluations/${assignment.periodId}/${assignment.id}`}>
-                                                        <Button size="sm" variant="secondary" className="font-bold text-xs h-8">
-                                                            Evalute
-                                                        </Button>
-                                                    </Link>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4">
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground capitalize">
+                                                    {assignment.type.replace(/-/g, " ")}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4">
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                                    Pending
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4 text-right">
+                                                <Link href={`/dashboard/evaluations/${assignment.periodId}/${assignment.id}`}>
+                                                    <Button size="sm" variant="secondary" className="font-bold text-xs h-8">
+                                                        Evaluate
+                                                    </Button>
+                                                </Link>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
                         )}
                     </Card>
                 </motion.div>
@@ -267,41 +266,25 @@ export default function DashboardOverview() {
                 {/* Resources and Quick Links */}
                 <div className="space-y-6">
                     <motion.div variants={item}>
-                        <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">Resources</h2>
+                        <h2 className="text-xl font-bold text-foreground mb-4">Resources</h2>
                         <div className="grid gap-4">
                             <Card variant="glass" className="p-5 group hover:border-cobalt-200 dark:hover:border-cobalt-900 transition-colors" hoverable>
                                 <Link href="/dashboard/guide" className="flex items-start gap-4">
-                                    <div className="p-3 rounded-xl bg-cobalt-50 text-cobalt-600 dark:bg-cobalt-900/20 dark:text-cobalt-400 group-hover:bg-cobalt-500 group-hover:text-white transition-colors">
+                                    <div className="p-3 rounded-lg bg-cobalt-50 text-cobalt-600 dark:bg-cobalt-900/20 dark:text-cobalt-400 group-hover:bg-cobalt-500 group-hover:text-white transition-colors">
                                         <BookOpen className="h-6 w-6" />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2 group-hover:text-cobalt-600 dark:group-hover:text-cobalt-400 transition-colors">
+                                        <h3 className="font-bold text-foreground flex items-center gap-2 group-hover:text-cobalt-600 dark:group-hover:text-cobalt-400 transition-colors">
                                             Evaluation Guide
                                             <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </h3>
-                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                                             Best practices for giving constructive feedback to your team.
                                         </p>
                                     </div>
                                 </Link>
                             </Card>
 
-                            <Card variant="glass" className="p-5 group hover:border-violet-200 dark:hover:border-violet-900 transition-colors" hoverable>
-                                <Link href="#" className="flex items-start gap-4">
-                                    <div className="p-3 rounded-xl bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-400 group-hover:bg-violet-500 group-hover:text-white transition-colors">
-                                        <HelpCircle className="h-6 w-6" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
-                                            Support Center
-                                            <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        </h3>
-                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
-                                            Need help with the platform? Contact HR or view FAQs.
-                                        </p>
-                                    </div>
-                                </Link>
-                            </Card>
                         </div>
                     </motion.div>
 

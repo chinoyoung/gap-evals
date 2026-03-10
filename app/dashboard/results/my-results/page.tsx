@@ -125,7 +125,7 @@ export default function MyResultsPage() {
                 <div className="grid gap-6 sm:grid-cols-2">
                     {periods.map((period) => (
                         <Link key={period.id} href={`/dashboard/results/my-results/${period.id}`}>
-                            <Card hoverable className="p-6">
+                            <Card hoverable className="p-6 relative">
                                 <div className="mb-4 flex items-start justify-between">
                                     <Badge
                                         variant={period.isShared ? "blue" : "emerald"}
@@ -135,15 +135,15 @@ export default function MyResultsPage() {
                                     </Badge>
                                 </div>
 
-                                <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 leading-tight">
+                                <h3 className="text-xl font-bold text-foreground leading-tight">
                                     {period.name}
                                 </h3>
-                                <p className="mt-2 text-sm text-zinc-500 line-clamp-2 leading-relaxed">
+                                <p className="mt-2 text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                                     {period.description || "No description provided."}
                                 </p>
 
-                                <div className="mt-6 flex flex-wrap gap-4 pt-6 border-t border-zinc-100 dark:border-zinc-800">
-                                    <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
+                                <div className="mt-6 flex flex-wrap gap-4 pt-6 border-t border-border">
+                                    <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                                         <CalendarDays className="h-3.5 w-3.5" />
                                         <span>
                                             {period.startDate
@@ -160,7 +160,7 @@ export default function MyResultsPage() {
                                 </div>
 
                                 <div className="absolute bottom-6 right-6 translate-x-0 sm:translate-x-4 opacity-100 sm:opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100">
-                                    <ChevronRight className="h-5 w-5 text-zinc-400" />
+                                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
                                 </div>
                             </Card>
                         </Link>

@@ -83,14 +83,14 @@ export default function DashboardLayout({
         <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950">
             {/* Floating Sidebar - Desktop */}
             <aside className="hidden w-72 flex-col p-4 lg:flex sticky top-0 h-screen">
-                <div className="flex h-full flex-col rounded-3xl bg-zinc-900 dark:bg-zinc-950 text-white shadow-2xl shadow-zinc-900/20 overflow-hidden relative">
+                <div className="flex h-full flex-col rounded-lg bg-zinc-900 dark:bg-zinc-950 text-white shadow-2xl shadow-zinc-900/20 overflow-hidden relative">
                     {/* Background Texture for Sidebar */}
                     <div className="absolute inset-0 opacity-10 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay pointer-events-none"></div>
 
                     {/* Logo Area */}
                     <div className="pt-8 pb-6 px-6 relative z-10">
                         <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-xl bg-cobalt-500 flex items-center justify-center shadow-lg shadow-cobalt-500/30">
+                            <div className="h-8 w-8 rounded-lg bg-cobalt-500 flex items-center justify-center shadow-lg shadow-cobalt-500/30">
                                 <span className="font-bold text-white text-lg">G</span>
                             </div>
                             <div>
@@ -115,7 +115,7 @@ export default function DashboardLayout({
                                                 key={item.href}
                                                 href={item.href}
                                                 className={cn(
-                                                    "group flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all relative overflow-hidden",
+                                                    "group flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all relative overflow-hidden",
                                                     isActive
                                                         ? "text-white bg-white/10"
                                                         : "text-zinc-400 hover:text-white hover:bg-white/5"
@@ -144,7 +144,7 @@ export default function DashboardLayout({
 
                     {/* User Profile / Logout */}
                     <div className="p-4 relative z-10 mt-auto bg-zinc-950/30 backdrop-blur-sm border-t border-white/5">
-                        <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 mb-3 border border-white/5">
+                        <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5 mb-3 border border-white/5">
                             <Avatar src={user.photoURL || undefined} name={user.displayName || undefined} className="ring-2 ring-zinc-800" />
                             <div className="overflow-hidden">
                                 <p className="truncate text-xs font-bold text-white">{user.displayName}</p>
@@ -153,7 +153,7 @@ export default function DashboardLayout({
                         </div>
                         <button
                             onClick={() => logOut()}
-                            className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold text-red-400 hover:bg-red-500/10 transition-colors"
+                            className="flex w-full items-center justify-center gap-2 rounded-lg py-3 text-xs font-bold text-red-400 hover:bg-red-500/10 transition-colors"
                         >
                             <LogOut className="h-3.5 w-3.5" />
                             Sign Out
@@ -170,7 +170,7 @@ export default function DashboardLayout({
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        className="p-2 h-10 w-10 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                        className="p-2 h-10 w-10 flex items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
                     >
                         {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                     </button>
@@ -199,7 +199,7 @@ export default function DashboardLayout({
                                                 href={item.href}
                                                 onClick={() => setIsMobileMenuOpen(false)}
                                                 className={cn(
-                                                    "flex items-center gap-4 rounded-2xl px-5 py-4 text-lg font-bold transition-all",
+                                                    "flex items-center gap-4 rounded-lg px-5 py-4 text-lg font-bold transition-all",
                                                     pathname === item.href
                                                         ? "bg-cobalt-600 text-white shadow-lg shadow-cobalt-600/20"
                                                         : "text-zinc-400 hover:text-white hover:bg-white/5"
@@ -218,7 +218,7 @@ export default function DashboardLayout({
                                         logOut();
                                         setIsMobileMenuOpen(false);
                                     }}
-                                    className="flex w-full items-center gap-4 rounded-2xl px-5 py-5 text-lg font-bold text-red-500"
+                                    className="flex w-full items-center gap-4 rounded-lg px-5 py-5 text-lg font-bold text-red-500"
                                 >
                                     <LogOut className="h-6 w-6" />
                                     Sign Out
