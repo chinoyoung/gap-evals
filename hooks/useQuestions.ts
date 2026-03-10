@@ -20,7 +20,7 @@ export function useQuestions(periodId?: string) {
         setLoading(true);
         try {
             const qPath = periodId ? `periods/${periodId}/questions` : "questions";
-            const q = query(collection(db, qPath), orderBy("order", "asc"));
+            const q = query(collection(db, qPath), orderBy("createdAt", "asc"));
             const snapshot = await getDocs(q);
             const data = snapshot.docs.map(doc => ({
                 id: doc.id,
@@ -37,7 +37,7 @@ export function useQuestions(periodId?: string) {
 
     useEffect(() => {
         const qPath = periodId ? `periods/${periodId}/questions` : "questions";
-        const q = query(collection(db, qPath), orderBy("order", "asc"));
+        const q = query(collection(db, qPath), orderBy("createdAt", "asc"));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => ({

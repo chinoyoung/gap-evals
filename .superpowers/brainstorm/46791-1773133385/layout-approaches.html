@@ -1,0 +1,176 @@
+<h2>Questions Library — Layout Approaches</h2>
+<p class="subtitle">3 ways to reduce visual clutter and improve navigation for 20-50 questions</p>
+
+<div class="cards">
+
+  <!-- Option A: Grouped Accordion -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="padding: 16px; font-family: system-ui; font-size: 12px; background: #fafafa; border-radius: 8px;">
+        <!-- Search bar -->
+        <div style="background: white; border: 1px solid #e4e4e7; border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; color: #a1a1aa; font-size: 11px;">
+          🔍 Search questions...
+        </div>
+        <!-- Group 1 -->
+        <div style="margin-bottom: 8px;">
+          <div style="background: white; border: 1px solid #e4e4e7; border-radius: 10px; padding: 10px 14px; font-weight: 700; font-size: 11px; display: flex; justify-content: space-between; align-items: center;">
+            <span>▾ Performance & Skills <span style="color:#a1a1aa; font-weight:400;">(8)</span></span>
+            <span style="background: #dbeafe; color: #1d4ed8; padding: 2px 6px; border-radius: 4px; font-size: 9px;">5 scale · 3 text</span>
+          </div>
+          <div style="border-left: 2px solid #e4e4e7; margin-left: 16px; padding: 6px 0 6px 12px;">
+            <div style="padding: 6px 0; color: #52525b; font-size: 10px; border-bottom: 1px solid #f4f4f5;">
+              <span style="background:#dbeafe; color:#1d4ed8; padding:1px 4px; border-radius:3px; font-size:8px; margin-right:4px;">#</span>
+              How would you rate communication skills?
+            </div>
+            <div style="padding: 6px 0; color: #52525b; font-size: 10px; border-bottom: 1px solid #f4f4f5;">
+              <span style="background:#ede9fe; color:#7c3aed; padding:1px 4px; border-radius:3px; font-size:8px; margin-right:4px;">T</span>
+              What areas need improvement?
+            </div>
+            <div style="padding: 6px 0; color: #a1a1aa; font-size: 10px; font-style: italic;">
+              + 6 more questions...
+            </div>
+          </div>
+        </div>
+        <!-- Group 2 (collapsed) -->
+        <div style="margin-bottom: 8px;">
+          <div style="background: white; border: 1px solid #e4e4e7; border-radius: 10px; padding: 10px 14px; font-weight: 700; font-size: 11px; display: flex; justify-content: space-between; align-items: center;">
+            <span>▸ Leadership & Teamwork <span style="color:#a1a1aa; font-weight:400;">(12)</span></span>
+            <span style="background: #dbeafe; color: #1d4ed8; padding: 2px 6px; border-radius: 4px; font-size: 9px;">8 scale · 4 text</span>
+          </div>
+        </div>
+        <!-- Group 3 (collapsed) -->
+        <div>
+          <div style="background: white; border: 1px solid #e4e4e7; border-radius: 10px; padding: 10px 14px; font-weight: 700; font-size: 11px; display: flex; justify-content: space-between; align-items: center;">
+            <span>▸ Self-Assessment <span style="color:#a1a1aa; font-weight:400;">(6)</span></span>
+            <span style="background: #fce7f3; color: #be185d; padding: 2px 6px; border-radius: 4px; font-size: 9px;">self only</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Grouped Accordion</h3>
+      <p>Add categories to questions. Each category is a collapsible section showing a summary count. Only one group expanded at a time. Includes search bar at top.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Hides complexity — only see what you need</li><li>Clear mental model of question organization</li><li>Scales well as library grows</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Requires adding a "category" field to each question</li><li>Extra step when creating questions</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B: Compact Card Grid -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="padding: 16px; font-family: system-ui; font-size: 12px; background: #fafafa; border-radius: 8px;">
+        <!-- Search + filters row -->
+        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+          <div style="flex:1; background: white; border: 1px solid #e4e4e7; border-radius: 10px; padding: 8px 12px; color: #a1a1aa; font-size: 11px;">
+            🔍 Search questions...
+          </div>
+          <div style="display:flex; background:#f4f4f5; border-radius:8px; padding:2px; gap:2px;">
+            <span style="background:white; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:600;">All</span>
+            <span style="padding:4px 8px; font-size:10px; color:#71717a;">Scale</span>
+            <span style="padding:4px 8px; font-size:10px; color:#71717a;">Text</span>
+          </div>
+        </div>
+        <!-- Card grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <div style="background: white; border: 1px solid #e4e4e7; border-radius: 10px; padding: 10px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="background:#dbeafe; color:#1d4ed8; padding:1px 5px; border-radius:4px; font-size:8px; font-weight:700;"># Scale</span>
+              <span style="color:#a1a1aa; font-size:9px;">···</span>
+            </div>
+            <p style="font-size:10px; color:#27272a; line-height:1.4;">How would you rate communication skills?</p>
+          </div>
+          <div style="background: white; border: 1px solid #e4e4e7; border-radius: 10px; padding: 10px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="background:#ede9fe; color:#7c3aed; padding:1px 5px; border-radius:4px; font-size:8px; font-weight:700;">T Text</span>
+              <span style="color:#a1a1aa; font-size:9px;">···</span>
+            </div>
+            <p style="font-size:10px; color:#27272a; line-height:1.4;">What areas need improvement?</p>
+          </div>
+          <div style="background: white; border: 1px solid #e4e4e7; border-radius: 10px; padding: 10px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="background:#dbeafe; color:#1d4ed8; padding:1px 5px; border-radius:4px; font-size:8px; font-weight:700;"># Scale</span>
+              <span style="color:#a1a1aa; font-size:9px;">···</span>
+            </div>
+            <p style="font-size:10px; color:#27272a; line-height:1.4;">Rate problem-solving ability</p>
+          </div>
+          <div style="background: white; border: 1px solid #e4e4e7; border-radius: 10px; padding: 10px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="background:#fce7f3; color:#be185d; padding:1px 5px; border-radius:4px; font-size:8px; font-weight:700;">Self</span>
+              <span style="color:#a1a1aa; font-size:9px;">···</span>
+            </div>
+            <p style="font-size:10px; color:#27272a; line-height:1.4;">Describe your biggest challenge</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Compact Card Grid</h3>
+      <p>Replace the flat list with a 2-3 column card grid. Each question is a small card showing type badge and text. Add a search bar. No categories needed — just visual breathing room.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>No schema changes — works with existing data</li><li>More scannable than a vertical list</li><li>Search bar helps find specific questions</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Less structured than categories</li><li>Cards may feel repetitive at 50+ questions</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C: Clean List with Search + Scope Sections -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="padding: 16px; font-family: system-ui; font-size: 12px; background: #fafafa; border-radius: 8px;">
+        <!-- Search bar -->
+        <div style="background: white; border: 1px solid #e4e4e7; border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; color: #a1a1aa; font-size: 11px;">
+          🔍 Search questions...
+        </div>
+        <!-- Stats row -->
+        <div style="display:flex; gap:8px; margin-bottom:12px;">
+          <div style="flex:1; background:white; border:1px solid #e4e4e7; border-radius:8px; padding:8px 10px; text-align:center;">
+            <div style="font-size:16px; font-weight:800; color:#18181b;">26</div>
+            <div style="font-size:9px; color:#71717a;">Total</div>
+          </div>
+          <div style="flex:1; background:white; border:1px solid #e4e4e7; border-radius:8px; padding:8px 10px; text-align:center;">
+            <div style="font-size:16px; font-weight:800; color:#1d4ed8;">18</div>
+            <div style="font-size:9px; color:#71717a;">Scale</div>
+          </div>
+          <div style="flex:1; background:white; border:1px solid #e4e4e7; border-radius:8px; padding:8px 10px; text-align:center;">
+            <div style="font-size:16px; font-weight:800; color:#7c3aed;">8</div>
+            <div style="font-size:9px; color:#71717a;">Text</div>
+          </div>
+        </div>
+        <!-- Simplified list -->
+        <div style="background:white; border:1px solid #e4e4e7; border-radius:10px; overflow:hidden;">
+          <div style="padding:8px 12px; display:flex; align-items:center; gap:8px; border-bottom:1px solid #f4f4f5;">
+            <span style="background:#dbeafe; color:#1d4ed8; padding:1px 4px; border-radius:3px; font-size:8px; font-weight:700;">#</span>
+            <span style="font-size:10px; color:#27272a; flex:1;">How would you rate communication skills?</span>
+            <span style="color:#d4d4d8; font-size:9px;">···</span>
+          </div>
+          <div style="padding:8px 12px; display:flex; align-items:center; gap:8px; border-bottom:1px solid #f4f4f5;">
+            <span style="background:#ede9fe; color:#7c3aed; padding:1px 4px; border-radius:3px; font-size:8px; font-weight:700;">T</span>
+            <span style="font-size:10px; color:#27272a; flex:1;">What areas need improvement?</span>
+            <span style="color:#d4d4d8; font-size:9px;">···</span>
+          </div>
+          <div style="padding:8px 12px; display:flex; align-items:center; gap:8px; border-bottom:1px solid #f4f4f5;">
+            <span style="background:#dbeafe; color:#1d4ed8; padding:1px 4px; border-radius:3px; font-size:8px; font-weight:700;">#</span>
+            <span style="font-size:10px; color:#27272a; flex:1;">Rate problem-solving ability</span>
+            <span style="color:#d4d4d8; font-size:9px;">···</span>
+          </div>
+          <div style="padding:8px 12px; display:flex; align-items:center; gap:8px;">
+            <span style="background:#dbeafe; color:#1d4ed8; padding:1px 4px; border-radius:3px; font-size:8px; font-weight:700;">#</span>
+            <span style="font-size:10px; color:#27272a; flex:1;">How well does this person collaborate?</span>
+            <span style="color:#d4d4d8; font-size:9px;">···</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. Streamlined List + Search</h3>
+      <p>Keep the list layout but declutter it: remove drag handles, add a search bar, add summary stats at top, tighten row spacing, and show actions only on hover. Minimal changes, maximum impact.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Least effort — refines what exists</li><li>No schema changes needed</li><li>Familiar list pattern</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Still a flat list — no grouping</li><li>May not feel like enough of a change</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>

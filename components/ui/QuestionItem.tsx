@@ -9,7 +9,7 @@ export interface Question {
     text: string;
     type: "scale" | "paragraph";
     scope?: "all" | "self";
-    order?: number;
+    categoryId: string;
     [key: string]: any;
 }
 

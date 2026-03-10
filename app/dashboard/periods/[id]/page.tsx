@@ -380,6 +380,18 @@ export default function PeriodDetailPage() {
         }
     };
 
+    const handleDeletePeriod = async () => {
+        if (!confirm("Are you sure you want to delete this period? This action cannot be undone.")) return;
+        try {
+            await deleteDoc(doc(db, "periods", id as string));
+            success("Period deleted.");
+            router.push("/dashboard/periods");
+        } catch (err) {
+            console.error("Error deleting period:", err);
+            toastError("Failed to delete period.");
+        }
+    };
+
     const onAddQuestion = async (text: string, type: "scale" | "paragraph", scope: "all" | "self") => {
         try {
             await addDoc(collection(db, `periods/${id}/questions`), {
@@ -622,6 +634,13 @@ export default function PeriodDetailPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleDeletePeriod}
+                        className="flex cursor-pointer items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-600 transition-all hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                    </button>
                     {period.status === 'draft' ? (
                         <button
                             onClick={handlePublish}

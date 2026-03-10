@@ -15,25 +15,17 @@ import {
     Timestamp,
     writeBatch
 } from "firebase/firestore";
-import { motion, AnimatePresence } from "framer-motion";
 import {
     Plus,
     Trash2,
     Edit2,
     Type,
     Hash,
-    Loader2,
     Check,
     AlertCircle,
     GripVertical,
-    Filter,
     Layers,
     List,
-    MoreHorizontal,
-    CheckSquare,
-    Square,
-    ChevronLeft,
-    ChevronRight,
     Search
 } from "lucide-react";
 
@@ -61,17 +53,19 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { ItemActions } from "@/components/ui/ItemActions";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Loading } from "@/components/ui/Loading";
 import { Badge } from "@/components/ui/Badge";
 
-import { QuestionItem, Question } from "@/components/ui/QuestionItem";
+import { Question } from "@/components/ui/QuestionItem";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { useQuestions } from "@/hooks/useQuestions";
 import { SkeletonQuestionItem } from "@/components/ui/Skeleton";
 import { X } from "lucide-react";
+import { useCategories, Category } from "@/hooks/useCategories";
+import { CategoryAccordion } from "@/components/questions/CategoryAccordion";
+import { QuestionStats } from "@/components/questions/QuestionStats";
+import { Select } from "@/components/ui/Select";
 
 function SortablePresetItem({ q, onRemove }: { q: Question; onRemove: () => void }) {
     const {
@@ -110,49 +104,11 @@ function SortablePresetItem({ q, onRemove }: { q: Question; onRemove: () => void
     );
 }
 
-function SortableQuestionItem({
-    q,
-    onEdit,
-    onDelete
-}: {
-    q: Question;
-    onEdit: (q: Question) => void;
-    onDelete: (id: string) => void
-}) {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging
-    } = useSortable({ id: q.id });
-
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        zIndex: isDragging ? 50 : "auto",
-        position: "relative" as const,
-    };
-
-    return (
-        <div ref={setNodeRef} style={style}>
-            <QuestionItem
-                question={q}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                showGrip
-                dragHandleProps={{ ...attributes, ...listeners }}
-                isDragging={isDragging}
-            />
-        </div>
-    );
-}
-
 export default function QuestionsPage() {
     const { isAdmin } = useAuth();
     const { success, error: toastError } = useToast();
-    const { questions, loading, setQuestions } = useQuestions();
+    const { questions, loading } = useQuestions();
+    const { categories, loading: categoriesLoading } = useCategories();
 
     const [isAdding, setIsAdding] = useState(false);
     const [newText, setNewText] = useState("");
@@ -173,9 +129,24 @@ export default function QuestionsPage() {
     // Preset Drag State
     const [activePresetId, setActivePresetId] = useState<string | null>(null);
 
-    // Pagination
-    const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = 10;
+    // Search
+    const [searchQuery, setSearchQuery] = useState("");
+
+    // Category accordion expand/collapse
+    const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+
+    // Category CRUD
+    const [isAddingCategory, setIsAddingCategory] = useState(false);
+    const [categoryName, setCategoryName] = useState("");
+    const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+    const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+    const [reassignCategoryId, setReassignCategoryId] = useState("");
+
+    // Category for new question (when adding via category menu)
+    const [newQuestionCategoryId, setNewQuestionCategoryId] = useState("");
+
+    // Bootstrap/migration state
+    const [bootstrapping, setBootstrapping] = useState(false);
 
     const presetSensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -184,12 +155,72 @@ export default function QuestionsPage() {
         })
     );
 
-    const sensors = useSensors(
-        useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-        useSensor(KeyboardSensor, {
-            coordinateGetter: sortableKeyboardCoordinates,
-        })
-    );
+    // Filter questions by type + search
+    const filteredQuestions = questions.filter(q => {
+        const matchesType = typeFilter === "all" || q.type === typeFilter;
+        const matchesSearch = !searchQuery.trim() || q.text.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesType && matchesSearch;
+    });
+
+    // Group by category
+    const questionsByCategory = filteredQuestions.reduce((acc, q) => {
+        const catId = q.categoryId || "uncategorized";
+        if (!acc[catId]) acc[catId] = [];
+        acc[catId].push(q);
+        return acc;
+    }, {} as Record<string, Question[]>);
+
+    // Categories to display (hide empty during search)
+    const visibleCategories = categories.filter(cat => {
+        if (searchQuery.trim()) {
+            return (questionsByCategory[cat.id]?.length || 0) > 0;
+        }
+        return true;
+    });
+
+    // Auto-expand categories with search matches
+    useEffect(() => {
+        if (searchQuery.trim()) {
+            const catsWithMatches = new Set(
+                filteredQuestions.map(q => q.categoryId).filter(Boolean)
+            );
+            setExpandedCategories(catsWithMatches as Set<string>);
+        }
+    }, [searchQuery, typeFilter]);
+
+    // Bootstrap: create a default "General" category if none exist
+    useEffect(() => {
+        async function bootstrap() {
+            if (!loading && !categoriesLoading && categories.length === 0 && questions.length > 0 && !bootstrapping) {
+                setBootstrapping(true);
+                try {
+                    const catRef = await addDoc(collection(db, "question_categories"), {
+                        name: "General",
+                        createdAt: Timestamp.now(),
+                    });
+                    const batch = writeBatch(db);
+                    questions.forEach(q => {
+                        batch.update(doc(db, "questions", q.id), { categoryId: catRef.id });
+                    });
+                    await batch.commit();
+                } catch (err) {
+                    console.error("Bootstrap failed:", err);
+                } finally {
+                    setBootstrapping(false);
+                }
+            }
+        }
+        bootstrap();
+    }, [loading, categoriesLoading, categories.length, questions]);
+
+    const toggleCategory = (catId: string) => {
+        setExpandedCategories(prev => {
+            const next = new Set(prev);
+            if (next.has(catId)) next.delete(catId);
+            else next.add(catId);
+            return next;
+        });
+    };
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -201,13 +232,14 @@ export default function QuestionsPage() {
                 await updateDoc(doc(db, "questions", editingId), {
                     text: newText,
                     type: newType,
+                    categoryId: newQuestionCategoryId,
                 });
                 success("Question updated successfully.");
             } else {
                 await addDoc(collection(db, "questions"), {
                     text: newText,
                     type: newType,
-                    order: questions.length,
+                    categoryId: newQuestionCategoryId,
                     createdAt: Timestamp.now(),
                 });
                 success("Question created successfully.");
@@ -221,33 +253,10 @@ export default function QuestionsPage() {
         }
     };
 
-    const handleDragEnd = async (event: DragEndEvent) => {
-        const { active, over } = event;
-
-        if (over && active.id !== over.id) {
-            const oldIndex = questions.findIndex((q) => q.id === active.id);
-            const newIndex = questions.findIndex((q) => q.id === over.id);
-
-            const newOrder = arrayMove(questions, oldIndex, newIndex);
-            setQuestions(newOrder);
-
-            try {
-                const batch = writeBatch(db);
-                newOrder.forEach((q, index) => {
-                    const qRef = doc(db, "questions", q.id);
-                    batch.update(qRef, { order: index });
-                });
-                await batch.commit();
-            } catch (error) {
-                console.error("Error updating question order", error);
-                toastError("Failed to save new order.");
-            }
-        }
-    };
-
     const startEditing = (question: Question) => {
         setNewText(question.text);
         setNewType(question.type);
+        setNewQuestionCategoryId(question.categoryId || "");
         setEditingId(question.id);
         setIsAdding(true);
     };
@@ -255,6 +264,7 @@ export default function QuestionsPage() {
     const resetForm = () => {
         setNewText("");
         setNewType("scale");
+        setNewQuestionCategoryId("");
         setEditingId(null);
         setIsAdding(false);
     };
@@ -270,15 +280,60 @@ export default function QuestionsPage() {
         }
     };
 
+    const handleSaveCategory = async () => {
+        if (!categoryName.trim()) return;
+        setSubmitting(true);
+        try {
+            if (editingCategory) {
+                await updateDoc(doc(db, "question_categories", editingCategory.id), { name: categoryName });
+                success("Category renamed.");
+            } else {
+                await addDoc(collection(db, "question_categories"), {
+                    name: categoryName,
+                    createdAt: Timestamp.now(),
+                });
+                success("Category created.");
+            }
+            setCategoryName("");
+            setEditingCategory(null);
+            setIsAddingCategory(false);
+        } catch (err) {
+            console.error(err);
+            toastError("Failed to save category.");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleDeleteCategory = async () => {
+        if (!deletingCategory || !reassignCategoryId) return;
+        setSubmitting(true);
+        try {
+            // Reassign all questions in this category
+            const batch = writeBatch(db);
+            questions
+                .filter(q => q.categoryId === deletingCategory.id)
+                .forEach(q => {
+                    batch.update(doc(db, "questions", q.id), { categoryId: reassignCategoryId });
+                });
+            batch.delete(doc(db, "question_categories", deletingCategory.id));
+            await batch.commit();
+            success("Category deleted and questions reassigned.");
+            setDeletingCategory(null);
+            setReassignCategoryId("");
+        } catch (err) {
+            console.error(err);
+            toastError("Failed to delete category.");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     useEffect(() => {
         if (activeTab === "presets") {
             fetchPresets();
         }
     }, [activeTab]);
-
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [typeFilter, questions.length]);
 
     const fetchPresets = async () => {
         try {
@@ -359,16 +414,6 @@ export default function QuestionsPage() {
         }
     };
 
-    const filteredQuestions = questions.filter(q =>
-        typeFilter === "all" ? true : q.type === typeFilter
-    );
-
-    const totalPages = Math.ceil(filteredQuestions.length / ITEMS_PER_PAGE);
-    const paginatedQuestions = filteredQuestions.slice(
-        (currentPage - 1) * ITEMS_PER_PAGE,
-        currentPage * ITEMS_PER_PAGE
-    );
-
     if (!isAdmin) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -416,11 +461,20 @@ export default function QuestionsPage() {
 
             {activeTab === "questions" ? (
                 <div className="space-y-6">
+                    {/* Search bar */}
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search questions..."
+                            className="w-full rounded-xl border-zinc-200 bg-zinc-50 pl-11 pr-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:ring-zinc-100"
+                        />
+                    </div>
+
+                    {/* Filters + New Category */}
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-center gap-2">
-                            <Filter className="h-4 w-4 text-zinc-400" />
-                            <span className="text-sm font-medium text-zinc-500">Filters:</span>
-                        </div>
                         <div className="flex items-center gap-2 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900 overflow-x-auto">
                             {(['all', 'scale', 'paragraph'] as const).map((filter) => (
                                 <button
@@ -435,71 +489,74 @@ export default function QuestionsPage() {
                                 </button>
                             ))}
                         </div>
+                        <Button
+                            variant="ghost"
+                            onClick={() => {
+                                setCategoryName("");
+                                setEditingCategory(null);
+                                setIsAddingCategory(true);
+                            }}
+                            icon={Plus}
+                        >
+                            New Category
+                        </Button>
                     </div>
 
-                    <Card className="overflow-hidden">
-                        {loading ? (
+                    {/* Stats */}
+                    <QuestionStats questions={questions} categoryCount={categories.length} />
+
+                    {/* Category Accordions */}
+                    {(loading || categoriesLoading || bootstrapping) ? (
+                        <Card className="overflow-hidden">
                             <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
                                 <SkeletonQuestionItem />
                                 <SkeletonQuestionItem />
                                 <SkeletonQuestionItem />
                                 <SkeletonQuestionItem />
                             </div>
-                        ) : filteredQuestions.length === 0 ? (
-                            <EmptyState
-                                className="border-none py-20"
-                                icon={Filter}
-                                title="No questions found"
-                                description="No questions found matching this filter."
-                            />
-                        ) : (
-                            <DndContext
-                                sensors={sensors}
-                                collisionDetection={closestCenter}
-                                onDragEnd={handleDragEnd}
-                                modifiers={[restrictToVerticalAxis]}
-                            >
-                                <SortableContext
-                                    items={paginatedQuestions.map((q) => q.id)}
-                                    strategy={verticalListSortingStrategy}
-                                >
-                                    <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                                        {paginatedQuestions.map((q) => (
-                                            <SortableQuestionItem
-                                                key={q.id}
-                                                q={q}
-                                                onEdit={startEditing}
-                                                onDelete={handleDelete}
-                                            />
-                                        ))}
-                                    </div>
-                                </SortableContext>
-                            </DndContext>
-                        )}
-                        {filteredQuestions.length > 0 && (
-                            <div className="flex items-center justify-between border-t border-zinc-100 bg-zinc-50 px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900/50">
-                                <p className="text-xs text-zinc-500">
-                                    Showing <span className="font-bold text-zinc-900 dark:text-zinc-100">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to <span className="font-bold text-zinc-900 dark:text-zinc-100">{Math.min(currentPage * ITEMS_PER_PAGE, filteredQuestions.length)}</span> of <span className="font-bold text-zinc-900 dark:text-zinc-100">{filteredQuestions.length}</span> questions
-                                </p>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                        disabled={currentPage === 1}
-                                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300 hover:text-zinc-700 disabled:opacity-50 disabled:hover:border-zinc-200 disabled:hover:text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-100"
-                                    >
-                                        <ChevronLeft className="h-4 w-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                        disabled={currentPage === totalPages}
-                                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300 hover:text-zinc-700 disabled:opacity-50 disabled:hover:border-zinc-200 disabled:hover:text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-100"
-                                    >
-                                        <ChevronRight className="h-4 w-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </Card>
+                        </Card>
+                    ) : visibleCategories.length === 0 && categories.length === 0 ? (
+                        <EmptyState
+                            icon={Layers}
+                            title="No categories yet"
+                            description="Create a category to start organizing your questions."
+                        />
+                    ) : visibleCategories.length === 0 && searchQuery.trim() ? (
+                        <EmptyState
+                            icon={Search}
+                            title="No results found"
+                            description="No questions match your search."
+                        />
+                    ) : (
+                        <div className="space-y-3">
+                            {visibleCategories.map((cat) => (
+                                <CategoryAccordion
+                                    key={cat.id}
+                                    category={cat}
+                                    questions={questionsByCategory[cat.id] || []}
+                                    isExpanded={expandedCategories.has(cat.id)}
+                                    onToggle={() => toggleCategory(cat.id)}
+                                    searchQuery={searchQuery}
+                                    onEditQuestion={startEditing}
+                                    onDeleteQuestion={handleDelete}
+                                    onEditCategory={() => {
+                                        setCategoryName(cat.name);
+                                        setEditingCategory(cat);
+                                        setIsAddingCategory(true);
+                                    }}
+                                    onDeleteCategory={() => {
+                                        setDeletingCategory(cat);
+                                        setReassignCategoryId("");
+                                    }}
+                                    onAddQuestion={() => {
+                                        resetForm();
+                                        setNewQuestionCategoryId(cat.id);
+                                        setIsAdding(true);
+                                    }}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div className="grid gap-4 md:grid-cols-2">
@@ -561,7 +618,7 @@ export default function QuestionsPage() {
                         <Button variant="ghost" type="button" onClick={resetForm}>
                             Cancel
                         </Button>
-                        <Button onClick={handleFormSubmit} loading={submitting} disabled={!newText.trim()}>
+                        <Button onClick={handleFormSubmit} loading={submitting} disabled={!newText.trim() || !newQuestionCategoryId}>
                             {editingId ? "Update Question" : "Save Question"}
                         </Button>
                     </div>
@@ -597,7 +654,95 @@ export default function QuestionsPage() {
                             </div>
                         </div>
                     </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Category</label>
+                        <Select
+                            value={newQuestionCategoryId}
+                            onChange={(e) => setNewQuestionCategoryId(e.target.value)}
+                        >
+                            <option value="">Select a category...</option>
+                            {categories.map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </Select>
+                    </div>
                 </form>
+            </Modal>
+
+            {/* Add/Rename Category Modal */}
+            <Modal
+                isOpen={isAddingCategory}
+                onClose={() => { setIsAddingCategory(false); setEditingCategory(null); setCategoryName(""); }}
+                title={editingCategory ? "Rename Category" : "New Category"}
+                description="Categories help organize your questions into groups."
+                footer={(
+                    <div className="flex justify-end gap-3 w-full">
+                        <Button variant="ghost" onClick={() => { setIsAddingCategory(false); setEditingCategory(null); setCategoryName(""); }}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSaveCategory} loading={submitting} disabled={!categoryName.trim()}>
+                            {editingCategory ? "Rename" : "Create Category"}
+                        </Button>
+                    </div>
+                )}
+            >
+                <div className="space-y-2">
+                    <label className="text-sm font-medium">Category Name</label>
+                    <input
+                        autoFocus
+                        value={categoryName}
+                        onChange={(e) => setCategoryName(e.target.value)}
+                        placeholder="e.g. Communication, Leadership, Technical"
+                        className="w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:focus:ring-zinc-100"
+                        onKeyDown={(e) => { if (e.key === "Enter") handleSaveCategory(); }}
+                    />
+                </div>
+            </Modal>
+
+            {/* Delete Category Modal */}
+            <Modal
+                isOpen={!!deletingCategory}
+                onClose={() => { setDeletingCategory(null); setReassignCategoryId(""); }}
+                title="Delete Category"
+                description={`${questions.filter(q => q.categoryId === deletingCategory?.id).length} questions will be reassigned to another category.`}
+                footer={(
+                    <div className="flex justify-end gap-3 w-full">
+                        <Button variant="ghost" onClick={() => { setDeletingCategory(null); setReassignCategoryId(""); }}>
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="danger"
+                            onClick={handleDeleteCategory}
+                            loading={submitting}
+                            disabled={!reassignCategoryId || categories.filter(c => c.id !== deletingCategory?.id).length === 0}
+                        >
+                            Delete & Reassign
+                        </Button>
+                    </div>
+                )}
+            >
+                <div className="space-y-4">
+                    <div className="rounded-xl bg-red-50 dark:bg-red-900/20 p-4">
+                        <p className="text-sm text-red-700 dark:text-red-300">
+                            This will permanently delete the category <strong>&quot;{deletingCategory?.name}&quot;</strong>. All questions in this category must be reassigned.
+                        </p>
+                    </div>
+                    {categories.filter(c => c.id !== deletingCategory?.id).length > 0 ? (
+                        <Select
+                            label="Reassign questions to"
+                            value={reassignCategoryId}
+                            onChange={(e) => setReassignCategoryId(e.target.value)}
+                        >
+                            <option value="">Select a category...</option>
+                            {categories.filter(c => c.id !== deletingCategory?.id).map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </Select>
+                    ) : (
+                        <p className="text-sm text-zinc-500">You need at least one other category to reassign questions to.</p>
+                    )}
+                </div>
             </Modal>
 
             {/* Preset Modal */}
